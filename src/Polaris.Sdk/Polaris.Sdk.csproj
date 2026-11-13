@@ -1,0 +1,6 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>Polaris.Sdk</RootNamespace>
+    <AssemblyName>Polaris.Sdk</AssemblyName>
+  </PropertyGroup>
+</Project>

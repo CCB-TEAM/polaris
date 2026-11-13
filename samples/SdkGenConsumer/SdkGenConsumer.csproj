@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
+    <CompilerGeneratedFilesOutputPath>$(BaseIntermediateOutputPath)generated</CompilerGeneratedFilesOutputPath>
+
+    <!-- 输入可用 -p:UsmapFile=... -p:CatalogFile=... 覆盖 -->
+    <UsmapFile Condition="'$(UsmapFile)' == ''">D:\files\projects\.tmp\polaris\kards.usmap</UsmapFile>
+    <CatalogFile Condition="'$(CatalogFile)' == ''">D:\files\projects\jmap-out\functions.json</CatalogFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <AdditionalFiles Include="$(UsmapFile)" />
+    <AdditionalFiles Include="$(CatalogFile)" />
+    <Analyzer Include="..\..\src\Polaris.SourceGen\bin\Debug\net10.0\Polaris.SourceGen.dll" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="Polaris.Sdk">
+      <HintPath>..\..\src\Polaris.Sdk\bin\Debug\net10.0\Polaris.Sdk.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+  </ItemGroup>
+
+</Project>

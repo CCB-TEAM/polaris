@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>Polaris.Compiler</RootNamespace>
+    <AssemblyName>Polaris.Compiler</AssemblyName>
+    <RoslynDir>$(MSBuildToolsPath)\Roslyn\bincore</RoslynDir>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="UAssetAPI" Version="1.1.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="Microsoft.CodeAnalysis">
+      <HintPath>$(RoslynDir)\Microsoft.CodeAnalysis.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Microsoft.CodeAnalysis.CSharp">
+      <HintPath>$(RoslynDir)\Microsoft.CodeAnalysis.CSharp.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Polaris.Sdk">
+      <HintPath>..\Polaris.Sdk\bin\Debug\net10.0\Polaris.Sdk.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+  </ItemGroup>
+</Project>

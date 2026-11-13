@@ -1,0 +1,74 @@
+# `Polaris.Cli/Program`
+
+**职责**：命令行入口。当前只实现 `cards list` 与 `cards set/reset`（M2）；`scan/sdk/apply/diff` 在后续里程碑。
+**对外入口**：进程入口（`polaris <verb> [options]`）。
+**内部结构**：`Main` → `Parse` → `List` / `Edit`；所有资产逻辑在 `Polaris.Assets`，CLI 只做编排与打印。
+**依赖**：`Polaris.Assets`。
+**取舍**：CLI 不实现任何资产逻辑——同一份逻辑被测试复用，避免 cskismet 那种「探针与主路径两套闸」。
+
+### `Main(args: string[]): int`
+
+**状态：✅ 已实现**（`cards list/set/reset` 实测；`scan/sdk/apply/diff` 未实现）
+
+- **签名与契约**：解析 verb 与参数并分发；返回退出码 0=成功、1=失败、2=参数错误。所有异常转成可读诊断。
+- **输入输出**：`polaris cards list --asset X --usmap U`；`polaris cards set --asset X --usmap U --set k=v [--set ...] --out D [--work W]`；`polaris cards reset ... --reset k`。`--work` 默认 `<cwd>/.polaris-work`。
+- **关键分支（伪代码）**：
+  ```
+  if 无参数: 打印 usage, 返回 2
+  switch args[0]:
+    cards: Parse(剩余) → list | set | reset
+    _    : 返回 2
+  catch VerificationFailedException: 打印 CDO/函数失败项，返回 1
+  ```
+- **边界与失败**：`--set` 写法缺 `=`、缺 `--asset/--usmap/--out` 都返回 2；`VerificationFailedException` 保留输出文件供诊断，但退出码 1。
+- **调用者与被调用者**：`run.ps1` 与用户调用；调用 `CardAsset.Open`、`CdoEditor.Apply`。
+
+### `List(opts: Options): int`
+
+**状态：✅ 已实现**
+
+- **签名与契约**：打印类名、原生父类、CDO 属性表（名字/类型/值/声明类）；只读。
+- **输入输出**：`--asset`/`--usmap` 必需；无 `--out`。
+- **关键分支（伪代码）**：`card = Open(...); foreach CDO 属性: 打印 + ResolveMember(name).DeclaringClass`。
+- **边界与失败**：属性在类链上找不到时打印 `<类链上没有>`，不中断。
+- **调用者与被调用者**：`Main` 调用；调用 `CardAsset.Open/ResolveMember`。
+
+### `Edit(opts: Options): int`
+
+**状态：✅ 已实现**（`set`/`reset` 同一入口）
+
+- **签名与契约**：把 `--set/--reset` 转成 `PatchSpec` 列表 → `CdoEditor.Apply` → 打印 patch、字节差异、校验结果；返回 0/1。
+- **输入输出**：必须给 `--out`；`--set` 值只支持 int/bool/float（与 CdoEditor 一致）。
+- **关键分支（伪代码）**：`if patches.Count == 0: 返回 2` → `report = Apply(...)` → 打印 → `report.Verify.Ok ? 0 : 1`。
+- **边界与失败**：写后校验失败时异常在 `Main` 捕获并打印报告；输出目录不覆盖输入（`CardAsset.Save` 拦截）。
+- **调用者与被调用者**：`Main` 调用；调用 `CdoEditor.Apply`。
+
+### `Sdk(opts: Options): int`
+
+**状态：✅ 已实现**（真实数据：485 文件 / 4357 类 / 5349 结构 / 1875 枚举 / 12617 方法 / 19275 成员）
+
+- **签名与契约**：读 usmap + functions.json → `SdkEmitter.Emit` → 按 `Polaris.Sdk/<Ns>/<Ns>.<Kind>.g.cs` 写盘；返回 0/1。
+- **输入输出**：`--usmap`/`--catalog`/`--out` 必需；`--filter kards,Engine` 只生成指定模块（按短名）。
+- **关键分支（伪代码）**：`UsmapReader.Read(bytes)` + `JmapReader.Read(text)` → `Emit(..., new SdkOptions(filter))` → 写文件 → 打印统计。
+- **边界与失败**：输出目录自动创建；解析失败抛 `FormatException`（`POLARIS_DEBUG=1` 打印堆栈）。
+- **调用者与被调用者**：`Main` 调用；调用 `UsmapReader`、`JmapReader`、`SdkEmitter`。
+
+### `Pak(opts: Options): int`
+
+**状态：✅ 已实现**（`pak --file ... --pak ...` 实测）
+
+- **签名与契约**：把若干绝对路径文件按 `--content-root` 相对化后打包；返回 0/1。
+- **输入输出**：至少一个 `--file`；`--pak` 必需；`--mount` 默认 `../../../kards/Content/`。
+- **关键分支（伪代码）**：`files.Select(f => (RelativeContentPath(f, root), ReadAllBytes(f)))` → `ModPak.Build` → 打印 mount/条目。
+- **边界与失败**：没有 `--file` 返回 2；路径不在 content root 下时 `PakPathException` → 1。
+- **调用者与被调用者**：`Main` 调用；调用 `ModPak.Build`。
+
+### `Diff(before: string, after: string): DiffReport`
+
+**状态：🚧 未实现**
+
+- **签名与契约**：两个资产/两份 bmap 的函数级与字段级差异报告；只读。
+- **输入输出**：用于回归：同一输入两次生成必须无 diff；`apply` 后只有声明的函数/字段有 diff。
+- **关键分支（伪代码）**：`逐函数字节 hash 比较 → 只对变化项做结构 diff`。
+- **边界与失败**：hash 相同但结构不同不可能；结构相同但字节不同必须报出来。
+- **调用者与被调用者**：未来的 `apply` 回归用；调用 `KismetWorkspace.VerifyAll`。

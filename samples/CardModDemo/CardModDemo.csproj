@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- 同 CLI/Tests：沙箱里 ProjectReference 的 restore 会触发 MSB4276，所以用 DLL 引用 -->
+    <Reference Include="Polaris.Assets">
+      <HintPath>..\..\src\Polaris.Assets\bin\Debug\net10.0\Polaris.Assets.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+    <Reference Include="Polaris.Pak">
+      <HintPath>..\..\src\Polaris.Pak\bin\Debug\net10.0\Polaris.Pak.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+    <Reference Include="Solstice.Kismet">
+      <HintPath>..\..\..\out-repos\solstice-kismet\src\Solstice.Kismet\bin\Debug\net10.0\Solstice.Kismet.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="UAssetAPI" Version="1.1.0" />
+  </ItemGroup>
+</Project>

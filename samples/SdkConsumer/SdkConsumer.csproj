@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <!-- 生成的 SDK 目录；默认指向 CLI 的 dump 输出 -->
+    <SdkDir Condition="'$(SdkDir)' == ''">..\..\.tmp\polaris\sdk-all\Polaris.Sdk</SdkDir>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="$(SdkDir)\**\*.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="Polaris.Sdk">
+      <HintPath>..\..\src\Polaris.Sdk\bin\Debug\net10.0\Polaris.Sdk.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+  </ItemGroup>
+</Project>

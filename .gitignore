@@ -1,0 +1,6 @@
+bin/
+obj/
+.polaris-work/
+.tmp/
+*.user
+*.suo

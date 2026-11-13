@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Polaris.Assets/Polaris.Assets.csproj" />
+    <Project Path="src/Polaris.Cli/Polaris.Cli.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Polaris.Tests/Polaris.Tests.csproj" />
+  </Folder>
+</Solution>

@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>Polaris.Cli</RootNamespace>
+    <AssemblyName>polaris</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- 沙箱里 ProjectReference 的 restore 图遍历会触发 MSB4276（嵌套 MSBuild 解析 SDK 失败），
+         所以同仓库项目也用 DLL 引用；run.ps1 保证按 Assets → Pak → Cli 顺序构建。 -->
+    <Reference Include="Polaris.Assets">
+      <HintPath>..\Polaris.Assets\bin\Debug\net10.0\Polaris.Assets.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+    <Reference Include="Polaris.SdkGen">
+      <HintPath>..\Polaris.SdkGen\bin\Debug\net10.0\Polaris.SdkGen.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+    <Reference Include="Polaris.Pak">
+      <HintPath>..\Polaris.Pak\bin\Debug\net10.0\Polaris.Pak.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="UAssetAPI" Version="1.1.0" />
+  </ItemGroup>
+</Project>

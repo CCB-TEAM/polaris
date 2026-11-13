@@ -1,0 +1,50 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RoslynDir>$(MSBuildToolsPath)\Roslyn\bincore</RoslynDir>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- 同 CLI/Tests：沙箱里 ProjectReference 的 restore 会触发 MSB4276，所以用 DLL 引用。 -->
+    <Reference Include="Polaris.Compiler">
+      <HintPath>..\..\src\Polaris.Compiler\bin\Debug\net10.0\Polaris.Compiler.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+    <Reference Include="Polaris.Assets">
+      <HintPath>..\..\src\Polaris.Assets\bin\Debug\net10.0\Polaris.Assets.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+    <Reference Include="Polaris.Pak">
+      <HintPath>..\..\src\Polaris.Pak\bin\Debug\net10.0\Polaris.Pak.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+    <Reference Include="Polaris.Sdk">
+      <HintPath>..\..\src\Polaris.Sdk\bin\Debug\net10.0\Polaris.Sdk.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+    <!-- 生成的 SDK（由 samples/SdkConsumer 从 usmap+jmap 编译而来） -->
+    <Reference Include="SdkConsumer">
+      <HintPath>..\SdkConsumer\bin\Debug\net10.0\SdkConsumer.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+    <Reference Include="Microsoft.CodeAnalysis">
+      <HintPath>$(RoslynDir)\Microsoft.CodeAnalysis.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+    <Reference Include="Microsoft.CodeAnalysis.CSharp">
+      <HintPath>$(RoslynDir)\Microsoft.CodeAnalysis.CSharp.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="UAssetAPI" Version="1.1.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Remove="Mod.cs" />
+    <None Include="Mod.cs" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>

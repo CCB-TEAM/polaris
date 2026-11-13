@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>Polaris.SourceGen</RootNamespace>
+    <AssemblyName>Polaris.SourceGen</AssemblyName>
+    <IsRoslynComponent>true</IsRoslynComponent>
+    <EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <!-- 本机 nuget.org 不可达：Roslyn 直接用 SDK 自带的那份 -->
+    <RoslynDir>$(MSBuildToolsPath)\Roslyn\bincore</RoslynDir>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Reference Include="Microsoft.CodeAnalysis">
+      <HintPath>$(RoslynDir)\Microsoft.CodeAnalysis.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Microsoft.CodeAnalysis.CSharp">
+      <HintPath>$(RoslynDir)\Microsoft.CodeAnalysis.CSharp.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <!-- 生成器必须自包含：analyzer 的依赖 DLL 不会被自动解析，
+         所以把 SdkGen 的源码直接编进来（CLI 仍单独引用 Polaris.SdkGen.dll）。 -->
+    <Compile Include="..\Polaris.SdkGen\*.cs" Link="SdkGen\%(Filename)%(Extension)" />
+  </ItemGroup>
+</Project>
