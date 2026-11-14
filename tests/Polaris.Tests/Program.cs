@@ -735,28 +735,6 @@ internal static class TestRunner
         });
     }
 
-    private static int IndexOfBlock(byte[] haystack, byte[] needle)
-    {
-        for (var i = 0; i + needle.Length <= haystack.Length; i++)
-        {
-            var match = true;
-            for (var j = 0; j < needle.Length; j++)
-            {
-                if (haystack[i + j] != needle[j])
-                {
-                    match = false;
-                    break;
-                }
-            }
-
-            if (match)
-            {
-                return i;
-            }
-        }
-
-        return -1;
-    }
 
     private static void OutRefArgument(TestContext env, string root)
     {
@@ -813,6 +791,7 @@ internal static class TestRunner
             True(report.Ok, "往返: " + report.Error);
         });
     }
+
 
     private static void Errors(TestContext env, string root)
     {

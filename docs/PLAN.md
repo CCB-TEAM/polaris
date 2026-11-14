@@ -99,3 +99,18 @@
 - usmap 会被 UAssetAPI 以读写模式打开 → 必须先复制到可写目录（`Usmap.PathToStream` 报 `UnauthorizedAccessException`）。
 - 参考源码：`D:\files\projects\ref-uapi`（UAssetAPI）、`polaris-research`（UE 烘培语义实测）、
   `ue-src\KismetCompilerVMBackend.cpp`（烘培语义）。
+
+## 9. 未决问题：ubergraph 跳转偏移基准（M4 前必须查清）
+
+实测 `BP_CardFunctions.AddAttackUntilEndOfTurn`：
+
+- 反序列化后逐条测量/顺序回读得到的指令起点：`0,41,63,109,131,212,271,273`（总长 274）
+- 两条 `EX_JumpIfNot` 的 `CodeOffset` 都是 `191`
+- `191` 落在 `EX_LocalVirtualFunction`（131 起，长 81）内部；从 191 解析能“碰巧”读出 `EX_ByteConst`，但不是真实语句起点
+- 同一资产的**无改动保存** `.uexp` 与原文件逐字节一致（798367/798367），排除了序列化保真问题
+
+UE 源码 `KismetCompilerVMBackend.cpp::PerformFixups` 写的是**绝对** statement 偏移
+（`CommitSkip(OffsetToFix, TargetStatementOffset)`），与实测不一致；怀疑与 ubergraph
+的脚本缓冲区分段/入口表有关。M4 之前需要：
+1. 找到该函数导出在 `.uexp` 中的真实脚本起点（当前按 SerialOffset 开窗没搜到字节块，说明窗定位还不准）；
+2. 对照 `JumpTargetFixupMap` 的 ubergraph 分支与 `StatementLabelMap` 的构建，确认 191 的基准。
