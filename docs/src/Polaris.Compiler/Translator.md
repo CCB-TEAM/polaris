@@ -22,7 +22,7 @@
     其它 → 抛 CompileException
   末尾补 EX_Return(EX_Nothing) + EX_EndOfScript
   ```
-- **边界与失败**：条件只接受 `true/false`；实参支持 int/bool/string/float/double 字面量与变量；算术/结构体常量仍报错。
+- **边界与失败**：条件支持 `true/false`、变量与比较表达式；实参支持字面量/变量/运算；`return` 可带表达式；struct 常量仍报错。
 - **调用者与被调用者**：`Polaris.Cli apply`（后续）与测试调用；调用 `BytecodeBuilder`、`IFunctionResolver`。
 
 ## 已验证的字节码形态

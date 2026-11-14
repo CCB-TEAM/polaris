@@ -93,8 +93,11 @@ public static class Translator
         {
             switch (statement)
             {
-                case ReturnStatementSyntax:
-                    builder.Emit(new EX_Return { ReturnExpression = new EX_Nothing() });
+                case ReturnStatementSyntax ret:
+                    builder.Emit(new EX_Return
+                    {
+                        ReturnExpression = ret.Expression is null ? new EX_Nothing() : EmitExpression(ret.Expression, context),
+                    });
                     return true;
 
                 case IfStatementSyntax ifStatement:

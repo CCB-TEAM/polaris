@@ -42,4 +42,14 @@
   <ItemGroup>
     <PackageReference Include="UAssetAPI" Version="1.1.0" />
   </ItemGroup>
+
+  <!-- DLL 引用在增量构建里偶尔不会重拷（编译器改了、测试还是旧 DLL）。
+       构建完强制同步一次，避免「测试跑的是上个版本的编译器」。 -->
+  <Target Name="SyncProjectDlls" AfterTargets="Build">
+    <Copy SourceFiles="..\..\src\Polaris.Assets\bin\Debug\net10.0\Polaris.Assets.dll" DestinationFolder="$(OutputPath)" SkipUnchangedFiles="false" />
+    <Copy SourceFiles="..\..\src\Polaris.SdkGen\bin\Debug\net10.0\Polaris.SdkGen.dll" DestinationFolder="$(OutputPath)" SkipUnchangedFiles="false" />
+    <Copy SourceFiles="..\..\src\Polaris.Pak\bin\Debug\net10.0\Polaris.Pak.dll" DestinationFolder="$(OutputPath)" SkipUnchangedFiles="false" />
+    <Copy SourceFiles="..\..\src\Polaris.Compiler\bin\Debug\net10.0\Polaris.Compiler.dll" DestinationFolder="$(OutputPath)" SkipUnchangedFiles="false" />
+    <Copy SourceFiles="..\..\src\Polaris.Sdk\bin\Debug\net10.0\Polaris.Sdk.dll" DestinationFolder="$(OutputPath)" SkipUnchangedFiles="false" />
+  </Target>
 </Project>

@@ -98,6 +98,7 @@ internal static class TestRunner
         DecompileText(env, root);
         LocalVariableWriteback(env, root);
         ModPatches();
+        ReturnValue(env, root);
         Errors(env, root);
 
         Console.WriteLine();
@@ -979,6 +980,55 @@ internal static class TestRunner
             Equal("4", patches[0].Value);
             Equal("hasBlitz", patches[1].Field);
             Equal("true", patches[1].Value);
+        });
+    }
+
+    private static void ReturnValue(TestContext env, string root)
+    {
+        Case("返回值：return 表达式", () =>
+        {
+            const string source = """
+                using Polaris.Sdk;
+
+                [UClass("/Script/Engine.KismetMathLibrary")]
+                public class KMLR : UObject
+                {
+                    [UFunction("FUNC_Static")] public static int Abs_Int(int A) => 0;
+                }
+
+                public class RMod
+                {
+                    public static int Run()
+                    {
+                        return 5;
+                    }
+                }
+                """;
+
+            var references = ((string)AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES")!)
+                .Split(Path.PathSeparator)
+                .Select(p => MetadataReference.CreateFromFile(p))
+                .ToList();
+            references.Add(MetadataReference.CreateFromFile(typeof(Polaris.Sdk.UObject).Assembly.Location));
+            var compilation = CSharpCompilation.Create(
+                "RetProbe",
+                [CSharpSyntaxTree.ParseText(source)],
+                references,
+                new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
+            var method = compilation.GetTypeByMetadataName("RMod")!
+                .GetMembers("Run").OfType<IMethodSymbol>().Single();
+
+            var host = CardAsset.Open(env.CardEventAans, env.Usmap, Work(root, "ret-card")).Asset;
+            var expressions = Translator.Compile(
+                compilation,
+                method,
+                host,
+                new IndexResolver((_, _) => new FPackageIndex(-1)));
+
+            var ret = expressions.OfType<EX_Return>().First();
+            True(ret.ReturnExpression is EX_IntConst { Value: 5 }, $"return 5: {ret.ReturnExpression?.Token} tok={string.Join(",", expressions.Select(e => e.Token))}");
+            var report = RoundTrip.Verify(expressions, host);
+            True(report.Ok, "往返: " + report.Error);
         });
     }
 

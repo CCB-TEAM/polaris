@@ -47,4 +47,11 @@
     <Compile Remove="Mod.cs" />
     <None Include="Mod.cs" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
+
+  <Target Name="SyncProjectDlls" AfterTargets="Build">
+    <Copy SourceFiles="..\..\src\Polaris.Compiler\bin\Debug\net10.0\Polaris.Compiler.dll" DestinationFolder="$(OutputPath)" SkipUnchangedFiles="false" />
+    <Copy SourceFiles="..\..\src\Polaris.Assets\bin\Debug\net10.0\Polaris.Assets.dll" DestinationFolder="$(OutputPath)" SkipUnchangedFiles="false" />
+    <Copy SourceFiles="..\..\src\Polaris.Pak\bin\Debug\net10.0\Polaris.Pak.dll" DestinationFolder="$(OutputPath)" SkipUnchangedFiles="false" />
+    <Copy SourceFiles="..\..\src\Polaris.Sdk\bin\Debug\net10.0\Polaris.Sdk.dll" DestinationFolder="$(OutputPath)" SkipUnchangedFiles="false" />
+  </Target>
 </Project>
