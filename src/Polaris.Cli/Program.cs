@@ -257,6 +257,7 @@ internal static class Cli
 
         var replacedTotal = 0;
         var patchedTotal = 0;
+        var multiAsset = plan.Count > 1;
         foreach (var (assetPath, entry) in plan)
         {
             if (!File.Exists(assetPath))
@@ -365,12 +366,19 @@ internal static class Cli
             if (opts.Values.TryGetValue("pak", out var pakPath))
             {
                 var relative = ModPak.RelativeContentPath(assetPath);
+                var targetPak = pakPath;
+                if (multiAsset)
+                {
+                    Directory.CreateDirectory(pakPath);
+                    targetPak = Path.Combine(pakPath, Path.GetFileNameWithoutExtension(assetPath) + ".pak");
+                }
+
                 var built = ModPak.Build(
                     [
                         new PakFile(relative, saved.UAsset),
                         new PakFile(Path.ChangeExtension(relative, ".uexp"), saved.UExp),
                     ],
-                    pakPath,
+                    targetPak,
                     opts.Mount);
                 Console.WriteLine($"pak      {built.PakPath}（{built.Bytes.Length} 字节 / {built.Archive.Entries.Count} 条目）");
             }
