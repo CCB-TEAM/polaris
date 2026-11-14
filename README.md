@@ -26,7 +26,8 @@ Polaris 是「**自研编译器 + UHT 风格 SDK**」的组合：
 | 写回既有函数 + 导入解析（其余函数字节不变） | ✅ |
 | `polaris apply`：注解 mod 一条命令写回（函数 + CDO 字段）+ 出 pak；多资产时每卡一个 pak | ✅ |
 | **数据注解**：`[PolarisAsset]`/`[PolarisReplace]`/`[PolarisPatch]` 放进 mod 源码 | ✅ |
-| 变量读写（赋值 / 变量作实参 / `out`、`ref` 实参） | ✅ |\n| `return` 带返回值（`return 5;` → `EX_Return(IntConst)`） | ✅ |
+| 变量读写（赋值 / 变量作实参 / `out`、`ref` 实参） | ✅ |
+| `return` 带返回值（`return 5;` → `EX_Return(IntConst)`） | ✅ |
 | 局部变量声明（`int x = 1;` → 补 FProperty + `EX_Let`，写回可重开） | ✅ |
 | 算术/比较/位运算/字符串/逻辑/一元表达式（含 `%`、`& \| ^ << >>`、`&& \|\|`、字符串拼接与比较） | ✅ |
 | 条件分支（`if (x > 1)` → 比较 + `EX_JumpIfNot`） | ✅ |

@@ -23,7 +23,7 @@ internal static class Cli
           apply        --mod <Mod.cs> --content <ContentRoot> --usmap <usmap> --out <dir>
                        [--sdk <GeneratedSdk.dll>] [--pak <mod.pak>]
           check        --asset <uasset> | --dir <目录> [--limit N] --usmap <usmap> [--json <file>]
-          decompile    --asset <uasset> | --dir <目录> --usmap <usmap> [--function <name>] [--strict] [--out <file|dir>]
+          decompile    --asset <uasset> | --dir <目录> --usmap <usmap> [--function <name>] [--strict] [--out <file|dir>]\n          diff         --before <uasset> --after <uasset> --usmap <usmap>   比较 CDO 与函数字节
 
         global options:
           --work <dir>         工作目录（usmap 副本与字节码校验用），默认 .polaris-work
@@ -59,6 +59,11 @@ internal static class Cli
             if (args[0] == "decompile")
             {
                 return Decompile(Parse(args.Skip(1).ToArray()));
+            }
+
+            if (args[0] == "diff")
+            {
+                return Diff(Parse(args.Skip(1).ToArray()));
             }
 
             if (args[0] == "pak")
@@ -387,6 +392,74 @@ internal static class Cli
         }
 
         Console.WriteLine($"ok       {replacedTotal} 个函数写回，{patchedTotal} 个 CDO 字段");
+        return 0;
+    }
+
+    private static int Diff(Options opts)
+    {
+        var usmap = opts.Require("usmap");
+        var before = CardAsset.Open(opts.Require("before"), usmap, Path.Combine(opts.Work, "_diff_before"));
+        var after = CardAsset.Open(opts.Require("after"), usmap, Path.Combine(opts.Work, "_diff_after"));
+
+        var beforeCdo = before.Snapshot();
+        var afterCdo = after.Snapshot();
+        var cdoDiffs = new List<string>();
+        foreach (var key in beforeCdo.Keys.Union(afterCdo.Keys).OrderBy(k => k, StringComparer.Ordinal))
+        {
+            var hasBefore = beforeCdo.TryGetValue(key, out var oldValue);
+            var hasAfter = afterCdo.TryGetValue(key, out var newValue);
+            if (!hasBefore)
+            {
+                cdoDiffs.Add($"+ {key} = {newValue}");
+            }
+            else if (!hasAfter)
+            {
+                cdoDiffs.Add($"- {key}（原 {oldValue}）");
+            }
+            else if (!string.Equals(oldValue, newValue, StringComparison.Ordinal))
+            {
+                cdoDiffs.Add($"~ {key}: {oldValue} -> {newValue}");
+            }
+        }
+
+        var beforeHashes = FunctionBytes.Hashes(before.Asset);
+        var afterHashes = FunctionBytes.Hashes(after.Asset);
+        var functionDiffs = new List<string>();
+        foreach (var name in beforeHashes.Keys.Union(afterHashes.Keys).OrderBy(n => n, StringComparer.Ordinal))
+        {
+            var hasBefore = beforeHashes.TryGetValue(name, out var oldHash);
+            var hasAfter = afterHashes.TryGetValue(name, out var newHash);
+            if (!hasBefore)
+            {
+                functionDiffs.Add($"+ {name}");
+            }
+            else if (!hasAfter)
+            {
+                functionDiffs.Add($"- {name}");
+            }
+            else if (!string.Equals(oldHash, newHash, StringComparison.Ordinal))
+            {
+                functionDiffs.Add($"~ {name}");
+            }
+        }
+
+        var uassetDiff = AssetDiff.Compare(before.OriginalUAssetBytes, after.OriginalUAssetBytes);
+        var uexpDiff = AssetDiff.Compare(before.OriginalUExpBytes, after.OriginalUExpBytes);
+
+        Console.WriteLine($"cdo       {cdoDiffs.Count} 处变化");
+        foreach (var line in cdoDiffs)
+        {
+            Console.WriteLine("  " + line);
+        }
+
+        Console.WriteLine($"functions {functionDiffs.Count} 处变化");
+        foreach (var line in functionDiffs)
+        {
+            Console.WriteLine("  " + line);
+        }
+
+        Console.WriteLine($"uasset    {uassetDiff.ChangedBytes} 字节变化（{uassetDiff.BeforeSize} -> {uassetDiff.AfterSize}）");
+        Console.WriteLine($"uexp      {uexpDiff.ChangedBytes} 字节变化（{uexpDiff.BeforeSize} -> {uexpDiff.AfterSize}）");
         return 0;
     }
 

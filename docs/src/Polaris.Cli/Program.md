@@ -130,3 +130,19 @@
   ```
 - **边界与失败**：跳转/未知指令以注释输出，不还原控制流。
 - **调用者与被调用者**：`polaris decompile`；调用 `CardAsset`、`KismetDecompiler`、`KismetText`。
+
+### `Diff(opts: Options): int`
+
+**状态：✅ 已实现**（`card_unit_t_70eot` 验证包 vs 原卡：`kredits 2 -> 0`、`OnPlayedFromHand` 变化、uexp 39 字节变化）
+
+- **签名与契约**：`polaris diff --before <uasset> --after <uasset> --usmap <usmap>`；输出 CDO 字段、函数字节、资产字节差异；总是返回 0（只读诊断）。
+- **输入输出**：CDO 用 `Snapshot()` 对比；函数用 `FunctionBytes.Hashes` 对比；字节用 `AssetDiff.Compare` 汇总。
+- **关键分支（伪代码）**：
+  ```
+  before/after = CardAsset.Open
+  遍历 CDO 键并集 → +/-/~
+  遍历函数哈希并集 → +/-/~
+  打印 uasset/uexp 的 ChangedBytes 与长度
+  ```
+- **边界与失败**：两个资产必须都是卡资产（无 CDO 会抛）；只看内容，不看 pak。
+- **调用者与被调用者**：`polaris diff`；调用 `CardAsset`、`FunctionBytes`、`AssetDiff`。
