@@ -283,6 +283,20 @@ internal static class Cli
                     ?? throw new InvalidOperationException($"资产里没有函数 {target.FunctionName}");
                 var classExport = card.Asset.Exports.OfType<UAssetAPI.ExportTypes.ClassExport>().First();
 
+                var functionParams = function.LoadedProperties
+                    .Where(p => (p.PropertyFlags & UAssetAPI.UnrealTypes.EPropertyFlags.CPF_Parm) != 0)
+                    .Select(p => p.Name.ToString())
+                    .ToHashSet(StringComparer.Ordinal);
+                foreach (var parameter in target.Method.Parameters)
+                {
+                    if (functionParams.Count > 0 && !functionParams.Contains(parameter.Name))
+                    {
+                        Console.Error.WriteLine(
+                            $"{target.FunctionName}: mod 参数 {parameter.Name} 在目标函数里不存在（现有: {string.Join(", ", functionParams)}）");
+                        return 1;
+                    }
+                }
+
                 var bytecode = Translator.Compile(
                     compilation,
                     target.Method,
