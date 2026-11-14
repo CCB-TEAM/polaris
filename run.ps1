@@ -83,10 +83,19 @@ switch ($Task) {
             }
         }
     }
+    'check-all' {
+        $bp = if ($env:POLARIS_BP_ROOT) { $env:POLARIS_BP_ROOT } else { 'D:\devenv\fmodel\Output\Exports\kards\Content\Blueprints' }
+        $sw = [Diagnostics.Stopwatch]::StartNew()
+        Step 'check all cards' {
+            dotnet run --project (Join-Path $root 'src\Polaris.Cli') --no-build -- check --dir (Join-Path $bp 'Cards') --usmap $usmap
+        }
+        $sw.Stop()
+        Write-Host ("check-all 用时 {0:N1}s" -f $sw.Elapsed.TotalSeconds) -ForegroundColor Cyan
+    }
     'list' {
         if (-not $Arg) { throw '用法: .\run.ps1 list <card.uasset>' }
         dotnet run --project (Join-Path $root 'src\Polaris.Cli') -- cards list --asset $Arg --usmap $usmap
     }
-    'help' { Write-Host '用法: .\run.ps1 build | verify | sdk | list <card.uasset> | help' }
+    'help' { Write-Host '用法: .\run.ps1 build | verify | sdk | sdk-jmap | check | check-all | list <card.uasset> | help' }
     default { Write-Host "未知任务: $Task"; exit 2 }
 }
