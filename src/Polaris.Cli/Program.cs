@@ -853,6 +853,8 @@ internal static class Cli
             {
                 tool = "polaris check",
                 usmap,
+                usmapSha256 = Convert.ToHexString(
+                    System.Security.Cryptography.SHA256.HashData(File.ReadAllBytes(usmap))).ToLowerInvariant(),
                 ok,
                 total,
                 assets,
