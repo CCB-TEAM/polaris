@@ -109,7 +109,7 @@
 - `191` 落在 `EX_LocalVirtualFunction`（131 起，长 81）内部；从 191 解析能“碰巧”读出 `EX_ByteConst`，但不是真实语句起点
 - 同一资产的**无改动保存** `.uexp` 与原文件逐字节一致（798367/798367），排除了序列化保真问题
 
-UE 源码 `KismetCompilerVMBackend.cpp::PerformFixups` 写的是**绝对** statement 偏移
+全资产统计（BP_CardFunctions 294 个函数 / 212 个含跳转 / 1599 个跳转目标）：只有 **22 个**目标落在指令起点；同一函数内不同目标到最近起点的偏差也不一致（+20/+9 等），说明不是单一基准常量。\n\nUE 源码 `KismetCompilerVMBackend.cpp::PerformFixups` 写的是**绝对** statement 偏移
 （`CommitSkip(OffsetToFix, TargetStatementOffset)`），与实测不一致；怀疑与 ubergraph
 的脚本缓冲区分段/入口表有关。M4 之前需要：
 1. 找到该函数导出在 `.uexp` 中的真实脚本起点（当前按 SerialOffset 开窗没搜到字节块，说明窗定位还不准）；
