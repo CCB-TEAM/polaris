@@ -121,7 +121,9 @@
 
 结论：文件里的跳转/入口偏移与当前序列化布局不一致，但整份资产的无改动保存仍逐字节一致——高度怀疑资产保存时用的是**旧版字节码格式**、运行时靠 `FBytecodeFixes` 一类逻辑修正（或段边界并不以我们解析的指令起点为准）。M4 前必须先确定这一点，否则重排会写出运行时无法执行的代码。
 
-'补充（Round 42）：**FModel 的独立反编译器同样解不开这些函数**——用户实测对卡资产报 `BlockJump` NRE 与 `Found unreached instructions (0, 23, 65, ...)`。这排除了「Polaris 解析器实现错误」，指向游戏/UE 版本的字节码偏移约定（或运行时才做的 fixup）。
+''**Round 43 已解**：`CodeOffset` 是 **in-memory 偏移**（Flora/CUE4Parse 的 `Visit` 布局：属性指针 8、StackNode 8），不是文件字节偏移。我们原来的写入器用序列化长度算偏移，导致跳转目标全错位；Flora 对 G1b 的语句落点 `[0,23,65,94,136,141,183,225]` 正好是我们按 Visit 模型算出的起点。`FloraLayout` 已按此实现，G1b 的跳转改为 `JumpIfNot→141` / `Jump→183`（`landedFlora=True`）。ubergraph 的入口值（stub 传的 `EX_IntConst`）仍是另一套语义，留给 M4。
+
+补充（Round 42）：**FModel 的独立反编译器同样解不开这些函数**'——用户实测对卡资产报 `BlockJump` NRE 与 `Found unreached instructions (0, 23, 65, ...)`。这排除了「Polaris 解析器实现错误」，指向游戏/UE 版本的字节码偏移约定（或运行时才做的 fixup）。
 
 UE 源码 `KismetCompilerVMBackend.cpp::PerformFixups` 写的是**绝对** statement 偏移'
 （`CommitSkip(OffsetToFix, TargetStatementOffset)`），与实测不一致；怀疑与 ubergraph

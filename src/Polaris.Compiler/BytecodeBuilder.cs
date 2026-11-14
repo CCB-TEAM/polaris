@@ -40,14 +40,14 @@ public sealed class BytecodeBuilder
 
     public KismetExpression[] Build(UAsset asset)
     {
-        // 每条指令的起始字节偏移。不要用 KismetExpression.GetSize：UAssetAPI 的 Visit
-        // 对 FPackageIndex（5.6 是 4 字节）按 8 字节计，会算错。直接序列化一条取长度最准。
+        // 每条指令的起始偏移，用 Flora/CUE4Parse 的 Visit 布局（属性指针 8、StackNode 8）。
+        // 不能用序列化长度：那是文件字节数，跟跳转用的 CodeOffset 坐标系不同。
         var starts = new uint[_expressions.Count + 1];
         uint position = 0;
         for (var i = 0; i < _expressions.Count; i++)
         {
             starts[i] = position;
-            position += Measure(_expressions[i], asset);
+            position += SizeForLayout(_expressions[i], asset);
         }
 
         starts[_expressions.Count] = position;
@@ -76,6 +76,19 @@ public sealed class BytecodeBuilder
         }
 
         return _expressions.ToArray();
+    }
+
+    private static uint SizeForLayout(KismetExpression expression, UAsset asset)
+    {
+        try
+        {
+            return (uint)FloraLayout.Size(expression);
+        }
+        catch (NotSupportedException)
+        {
+            // 原始资产里的表达式种类我们不一定生成；没有标签跳转时这个值不参与任何改写
+            return Measure(expression, asset);
+        }
     }
 
     public static uint Measure(KismetExpression expression, UAsset asset)

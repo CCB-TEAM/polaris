@@ -54,6 +54,15 @@ public static class BytecodeCheck
             errors.Add($"指令数 {expressions.Count} vs 读回 {starts.Count}");
         }
 
+        // 跳转目标必须落在 Visit 布局的语句起点上（不是文件字节位置）
+        var statementStarts = new List<uint>();
+        uint position = 0;
+        foreach (var expression in expressions)
+        {
+            statementStarts.Add(position);
+            position += (uint)FloraLayout.Size(expression);
+        }
+
         var jumpTargets = new List<uint>();
         foreach (var expression in expressions)
         {
@@ -70,9 +79,9 @@ public static class BytecodeCheck
 
         foreach (var target in jumpTargets)
         {
-            if (!starts.Contains(target))
+            if (!statementStarts.Contains(target))
             {
-                errors.Add($"跳转目标 {target} 不在指令起始集合里");
+                errors.Add($"跳转目标 {target} 不在 Visit 布局的语句起点集合里");
             }
         }
 

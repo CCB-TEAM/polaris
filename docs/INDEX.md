@@ -45,7 +45,8 @@
 | Compiler | [`Resolve`](src/Polaris.Compiler/AssetImportTable.md#resolveownerpath-string-functionname-string-fpackageindex) | ✅ | 类/函数 → 导入索引 |
 | Compiler | [`FindPatches`](src/Polaris.Compiler/ModPlanBuilder.md#findpatchescompilation-compilation-ireadonlylistmodpatch) | ✅ | 注解 → CDO 计划 |
 | Compiler | [`EnsureClass`](src/Polaris.Compiler/AssetImportTable.md#ensureclassownerpath-string-fpackageindex) | ✅ | 补类导入 |
-| Compiler | [`EnsurePackage`](src/Polaris.Compiler/AssetImportTable.md#ensurepackagepackagepath-string-fpackageindex) | ✅ | 补包导入 |
+'| Compiler | [`EnsurePackage`](src/Polaris.Compiler/AssetImportTable.md#ensurepackagepackagepath-string-fpackageindex) | ✅ | 补包导入 |
+| Compiler | [`Size`](src/Polaris.Compiler/FloraLayout.md#sizeexpression-kismetexpression-int) | ✅ | Visit 布局尺寸（跳转坐标系） |'
 | Compiler | [`EnsureFunction`](src/Polaris.Compiler/AssetImportTable.md#ensurefunctionownerpath-string-functionname-string-fpackageindex) | ✅ | 补函数导入 |
 | Pak | [`RelativeContentPath`](src/Polaris.Pak/ModPak.md#relativecontentpathfilepath-string-contentroot-string-string) | ✅ | 绝对路径 → pak 内路径 |
 | Pak | [`Build`](src/Polaris.Pak/ModPak.md#buildfiles-ienumerablepakfile-pakpath-string-mountpoint-string-builtpak) | ✅ | 打包 + 读回 + 确定性自检 |

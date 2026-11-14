@@ -496,32 +496,84 @@ internal static class Cli
         }
 
         var block = SerializeExpressions(function.ScriptBytecode, card.Asset);
-        var starts = ParseStarts(block, card.Asset).ToHashSet();
-        var offset = 0;
+        var fileStarts = new HashSet<int>();
+        var floraStarts = new HashSet<int>();
+        var rows = new List<(int Index, int FileOffset, int FloraOffset, string Token, uint? Target)>();
+        int fileOffset = 0, floraOffset = 0;
         for (var i = 0; i < function.ScriptBytecode.Length; i++)
         {
             var expression = function.ScriptBytecode[i];
-            var size = SerializeExpressions([expression], card.Asset).Length;
-            var line = $"  #{i} @{offset} {expression.Token}";
-            switch (expression)
+            var raw = SerializeExpressions([expression], card.Asset).Length;
+            fileStarts.Add(fileOffset);
+            floraStarts.Add(floraOffset);
+            uint? target = expression switch
             {
-                case UAssetAPI.Kismet.Bytecode.Expressions.EX_Jump jump:
-                    line += $" -> {jump.CodeOffset} landed={starts.Contains(jump.CodeOffset)}";
-                    break;
-                case UAssetAPI.Kismet.Bytecode.Expressions.EX_JumpIfNot jumpIfNot:
-                    line += $" -> {jumpIfNot.CodeOffset} landed={starts.Contains(jumpIfNot.CodeOffset)} cond={jumpIfNot.BooleanExpression.Token}";
-                    break;
-                case UAssetAPI.Kismet.Bytecode.Expressions.EX_ComputedJump computed:
-                    line += $" operand={computed.CodeOffsetExpression.Token}";
-                    break;
+                UAssetAPI.Kismet.Bytecode.Expressions.EX_Jump jump => jump.CodeOffset,
+                UAssetAPI.Kismet.Bytecode.Expressions.EX_JumpIfNot jumpIfNot => jumpIfNot.CodeOffset,
+                _ => null,
+            };
+            rows.Add((i, fileOffset, floraOffset, expression.Token.ToString(), target));
+            fileOffset += raw;
+            int floraSize;
+            try
+            {
+                floraSize = Polaris.Compiler.FloraLayout.Size(expression);
+            }
+            catch (NotSupportedException)
+            {
+                floraSize = raw + 4 * CountNames(expression);
+            }
+
+            floraOffset += floraSize;
+        }
+
+        foreach (var row in rows)
+        {
+            var line = $"  #{row.Index} file@{row.FileOffset} flora@{row.FloraOffset} {row.Token}";
+            if (row.Target is uint target)
+            {
+                line += $" -> {target} landedFile={fileStarts.Contains((int)target)} landedFlora={floraStarts.Contains((int)target)}";
             }
 
             Console.WriteLine(line);
-            offset += size;
         }
 
-        Console.WriteLine($"bytes      {block.Length}  starts={starts.Count}");
+        Console.WriteLine($"bytes      {block.Length}  fileStarts={fileStarts.Count} floraStarts={floraStarts.Count}");
         return 0;
+    }
+
+    private static int CountNames(object? value)
+    {
+        switch (value)
+        {
+            case null:
+                return 0;
+            case UAssetAPI.Kismet.Bytecode.KismetPropertyPointer pointer:
+                return pointer.New?.Path?.Length ?? 1;
+            case UAssetAPI.Kismet.Bytecode.KismetExpression expression:
+            {
+                var total = 0;
+                foreach (var field in expression.GetType().GetFields(
+                             System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance))
+                {
+                    total += CountNames(field.GetValue(expression));
+                }
+
+                return total;
+            }
+            case System.Collections.IEnumerable enumerable when value is not string:
+            {
+                var total = 0;
+                foreach (var item in enumerable)
+                {
+                    total += CountNames(item);
+                }
+
+                return total;
+            }
+            default:
+                return 0;
+        }
     }
 
     private static int Ubergraph(Options opts)
