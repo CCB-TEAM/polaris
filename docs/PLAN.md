@@ -109,7 +109,19 @@
 - `191` 落在 `EX_LocalVirtualFunction`（131 起，长 81）内部；从 191 解析能“碰巧”读出 `EX_ByteConst`，但不是真实语句起点
 - 同一资产的**无改动保存** `.uexp` 与原文件逐字节一致（798367/798367），排除了序列化保真问题
 
-全资产统计（BP_CardFunctions 294 个函数 / 212 个含跳转 / 1599 个跳转目标）：只有 **22 个**目标落在指令起点；同一函数内不同目标到最近起点的偏差也不一致（+20/+9 等），说明不是单一基准常量。\n\n补充（Round 5）：`AddAttackUntilEndOfTurn` 的 `191` 恰好是 `ExecuteUbergraph_BP_CardFunctions`（2035 字节）里的一个指令起点，但该函数自身的 274 字节块**不在** ubergraph 字节里；对 `abs`/`start+off`/`start+1+off`/`start+5+off`/`end-off`/`prevStart+off` 六种公式全量统计都只有 1–2% 命中，基本可排除单一线性基准。\n再按 token 分开：`EX_Jump` 绝对 8 / 相对 2；`EX_JumpIfNot` 绝对 14 / 相对 11 —— 两者都没有稳定基准，说明问题不在“Jump 和 JumpIfNot 用了不同公式”。\n\n补充（Round 7）：`card_event_aans` 的 `ExecuteUbergraph_*`（9 条表达式 / 367 字节）以 `EX_ComputedJump` 开头（入口分发），其中 `EX_JumpIfNot` 在 243、偏移 252，也不落在任何解析出的指令起点。也就是说 ubergraph 的跳转很可能是**段内相对**，段边界由运行时 `ComputedJump` 的入口表决定——静态重烘前必须先解出这张表。\n\n补充（Round 9）：找到入口值的位置——事件存根 `OnPlayedFromHand` 的最后一个调用是 `EX_LocalFinalFunction ExecuteUbergraph( EX_IntConst 10 )`；ubergraph 的指令起点是 `[0,18,76,167,202,243,265,364,366]`，`10` 不在其中（10 < 18，落在开头的 `EX_ComputedJump` 内部）。BP_CardFunctions 的 10 个 stub 入口与最近起点的差值分别是 20/88/1/0/44/18/7/13/31/50，**不是常数**。\n再对三个资产做常量平移搜索（k ∈ [-128,128]）：最佳 `k=-82` 也只命中 2/13 个入口，**不存在统一的平移量**。\n\n结论：文件里的跳转/入口偏移与当前序列化布局不一致，但整份资产的无改动保存仍逐字节一致——高度怀疑资产保存时用的是**旧版字节码格式**、运行时靠 `FBytecodeFixes` 一类逻辑修正（或段边界并不以我们解析的指令起点为准）。M4 前必须先确定这一点，否则重排会写出运行时无法执行的代码。\n\nUE 源码 `KismetCompilerVMBackend.cpp::PerformFixups` 写的是**绝对** statement 偏移
+全资产统计（BP_CardFunctions 294 个函数 / 212 个含跳转 / 1599 个跳转目标）：只有 **22 个**目标落在指令起点；同一函数内不同目标到最近起点的偏差也不一致（+20/+9 等），说明不是单一基准常量。
+
+补充（Round 5）：`AddAttackUntilEndOfTurn` 的 `191` 恰好是 `ExecuteUbergraph_BP_CardFunctions`（2035 字节）里的一个指令起点，但该函数自身的 274 字节块**不在** ubergraph 字节里；对 `abs`/`start+off`/`start+1+off`/`start+5+off`/`end-off`/`prevStart+off` 六种公式全量统计都只有 1–2% 命中，基本可排除单一线性基准。
+再按 token 分开：`EX_Jump` 绝对 8 / 相对 2；`EX_JumpIfNot` 绝对 14 / 相对 11 —— 两者都没有稳定基准，说明问题不在“Jump 和 JumpIfNot 用了不同公式”。
+
+补充（Round 7）：`card_event_aans` 的 `ExecuteUbergraph_*`（9 条表达式 / 367 字节）以 `EX_ComputedJump` 开头（入口分发），其中 `EX_JumpIfNot` 在 243、偏移 252，也不落在任何解析出的指令起点。也就是说 ubergraph 的跳转很可能是**段内相对**，段边界由运行时 `ComputedJump` 的入口表决定——静态重烘前必须先解出这张表。
+
+补充（Round 9）：找到入口值的位置——事件存根 `OnPlayedFromHand` 的最后一个调用是 `EX_LocalFinalFunction ExecuteUbergraph( EX_IntConst 10 )`；ubergraph 的指令起点是 `[0,18,76,167,202,243,265,364,366]`，`10` 不在其中（10 < 18，落在开头的 `EX_ComputedJump` 内部）。BP_CardFunctions 的 10 个 stub 入口与最近起点的差值分别是 20/88/1/0/44/18/7/13/31/50，**不是常数**。
+再对三个资产做常量平移搜索（k ∈ [-128,128]）：最佳 `k=-82` 也只命中 2/13 个入口，**不存在统一的平移量**。
+
+结论：文件里的跳转/入口偏移与当前序列化布局不一致，但整份资产的无改动保存仍逐字节一致——高度怀疑资产保存时用的是**旧版字节码格式**、运行时靠 `FBytecodeFixes` 一类逻辑修正（或段边界并不以我们解析的指令起点为准）。M4 前必须先确定这一点，否则重排会写出运行时无法执行的代码。
+
+UE 源码 `KismetCompilerVMBackend.cpp::PerformFixups` 写的是**绝对** statement 偏移
 （`CommitSkip(OffsetToFix, TargetStatementOffset)`），与实测不一致；怀疑与 ubergraph
 的脚本缓冲区分段/入口表有关。M4 之前需要：
 1. 找到该函数导出在 `.uexp` 中的真实脚本起点（当前按 SerialOffset 开窗没搜到字节块，说明窗定位还不准）；

@@ -131,7 +131,7 @@ public static class Translator
 
     private static void EmitIf(IfStatementSyntax ifStatement, BytecodeBuilder builder, Context context)
     {
-        var condition = EmitCondition(ifStatement.Condition);
+        var condition = EmitCondition(ifStatement.Condition, context);
         var elseLabel = builder.NewLabel();
         var endLabel = builder.NewLabel();
 
@@ -154,7 +154,7 @@ public static class Translator
         builder.MarkLabel(endLabel);
     }
 
-    private static KismetExpression EmitCondition(ExpressionSyntax expression)
+    private static KismetExpression EmitCondition(ExpressionSyntax expression, Context context)
     {
         if (expression.IsKind(SyntaxKind.TrueLiteralExpression))
         {
@@ -166,7 +166,7 @@ public static class Translator
             return new EX_False();
         }
 
-        throw new CompileException($"if 条件暂只支持 true/false 字面量: {expression}", expression);
+        return EmitExpression(expression, context);
     }
 
     private static KismetExpression EmitBinary(BinaryExpressionSyntax binary, Context context)
@@ -177,21 +177,28 @@ public static class Translator
             SyntaxKind.SubtractExpression => "Subtract",
             SyntaxKind.MultiplyExpression => "Multiply",
             SyntaxKind.DivideExpression => "Divide",
+            SyntaxKind.GreaterThanExpression => "Greater",
+            SyntaxKind.LessThanExpression => "Less",
+            SyntaxKind.GreaterThanOrEqualExpression => "GreaterEqual",
+            SyntaxKind.LessThanOrEqualExpression => "LessEqual",
+            SyntaxKind.EqualsExpression => "EqualEqual",
+            SyntaxKind.NotEqualsExpression => "NotEqual",
             _ => throw new CompileException($"暂不支持的运算符 {binary.OperatorToken.Text}", binary),
         };
 
         var operandType = context.Model.GetTypeInfo(binary.Left).Type;
-        var functionName = operandType?.SpecialType switch
+        var suffix = operandType?.SpecialType switch
         {
-            SpecialType.System_Int32 => op + "_IntInt",
-            SpecialType.System_Single => op + "_FloatFloat",
-            SpecialType.System_Double => op + "_DoubleDouble",
+            SpecialType.System_Int32 => "IntInt",
+            SpecialType.System_Single => "FloatFloat",
+            SpecialType.System_Double => "DoubleDouble",
+            SpecialType.System_Boolean when binary.Kind() is SyntaxKind.EqualsExpression or SyntaxKind.NotEqualsExpression => "BoolBool",
             _ => throw new CompileException($"暂不支持的运算数类型 {operandType}", binary),
         };
 
         return new EX_CallMath
         {
-            StackNode = context.Resolver.Resolve("/Script/Engine.KismetMathLibrary", functionName),
+            StackNode = context.Resolver.Resolve("/Script/Engine.KismetMathLibrary", op + "_" + suffix),
             Parameters =
             [
                 EmitExpression(binary.Left, context),

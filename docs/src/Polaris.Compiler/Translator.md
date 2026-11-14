@@ -66,17 +66,25 @@ return;
 - **关键分支（伪代码）**：`flags 含 FUNC_Static ? Final : (本资产导出 ? Virtual : Context)`。
 - **边界与失败**：名字歧义报错列候选；占位参数必须显式给出。
 - **调用者与被调用者**：`Compile` 调用；依赖 `IFunctionResolver`。
+### `EmitCondition(expression: ExpressionSyntax, context: Context): KismetExpression`
+
+**状态：✅ 已实现**（测试「局部变量声明：写回 + 重开往返」覆盖 `if (x > 1)`）
+
+- **签名与契约**：`true/false` 字面量 → `EX_True/EX_False`；其它表达式走 `EmitExpression`（变量/比较/调用）。
+- **边界与失败**：条件必须是 bool（由 Roslyn 语义模型保证）；不支持的表达式抛 `CompileException`。
+- **调用者与被调用者**：`EmitIf` 调用；依赖 `EmitExpression`。
+
 ### `EmitBinary(binary: BinaryExpressionSyntax, context: Context): KismetExpression`
 
-**状态：✅ 已实现**（测试「局部变量声明：写回 + 重开往返」覆盖 `x = x + 2`）
+**状态：✅ 已实现**（测试「局部变量声明：写回 + 重开往返」覆盖 `x = x + 2` 与 `if (x > 1)`）
 
-- **签名与契约**：`+ - * /` → `EX_CallMath` 调 `KismetMathLibrary` 的 `Add_IntInt`/`Subtract_IntInt`/`Multiply_IntInt`/`Divide_IntInt`（float 用 `_FloatFloat`，double 用 `_DoubleDouble`）。
-- **输入输出**：运算数递归走 `EmitExpression`；类型从 Roslyn 语义模型取。
+- **签名与契约**：`+ - * /` → `Add/Subtract/Multiply/Divide`；比较 `> < >= <= == !=` → `Greater/Less/GreaterEqual/LessEqual/EqualEqual/NotEqual`；统一走 `EX_CallMath` 调 `KismetMathLibrary`（int `_IntInt`、float `_FloatFloat`、double `_DoubleDouble`、bool 相等 `_BoolBool`）。
+- **输入输出**：运算数递归 `EmitExpression`；类型取 Roslyn 语义模型。
 - **关键分支（伪代码）**：
   ```
-  op = kind → Add/Subtract/Multiply/Divide（其它抛 CompileException）
-  类型 = GetTypeInfo(left).Type → Int32/Float/Double
-  return EX_CallMath { StackNode = resolver(KismetMathLibrary, op+"_"+类型后缀), Parameters=[left,right] }
+  op = kind → Add/.../NotEqual（其它抛）
+  suffix = 类型 → IntInt/FloatFloat/DoubleDouble/BoolBool
+  return EX_CallMath { KismetMathLibrary, op+"_"+suffix, [left,right] }
   ```
-- **边界与失败**：不支持取模/位运算/字符串拼接；运算数类型不是数值时抛 `CompileException`。
-- **调用者与被调用者**：`EmitExpression` 调用；依赖 `IFunctionResolver`。
+- **边界与失败**：不支持取模/位运算/字符串拼接；类型不匹配抛 `CompileException`。
+- **调用者与被调用者**：`EmitExpression`、`EmitCondition` 调用；依赖 `IFunctionResolver`。

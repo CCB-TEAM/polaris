@@ -23,8 +23,16 @@ Polaris 是「**自研编译器 + UHT 风格 SDK**」的组合：
 | CDO 改值（原生父类成员：`kredits`/`attack`/`has*`…；改值 / 补差量条目 / Reset） | ✅ |
 | mod `.pak` 导出（v3 / store / mount `../../../kards/Content/`，对真实 mod pak 逐字节验证） | ✅ |
 | 编译器：静态/实例调用、`if-else`、`return`、`out/ref`、int/bool/string/float/double 字面量 | ✅ |
-| 写回既有函数 + 导入解析（其余函数字节不变） | ✅ |\n| `polaris apply`：注解 mod 一条命令写回（函数 + CDO 字段）+ 出 pak | ✅ |\n| **数据注解**：`[PolarisAsset]`/`[PolarisReplace]` 把「目标资产 + 目标函数」放进 mod 源码 | ✅ |
-| 变量读写（赋值 / 变量作实参 / `out`、`ref` 实参） | ✅ |\n| 局部变量声明（`int x = 1;` → 补 FProperty + `EX_Let`，写回可重开） | ✅ |\n| 算术表达式（`+ - * /` → `EX_CallMath` 调 KismetMathLibrary） | ✅ |\n| `out`/`ref`/`const` 参数（从纯 jmap 的 CPF flags 推出） | ✅ |\n| 反编译 → 回编译字节一致（真实资产 **302/302 函数**：BP_CardFunctions + 3 张卡） | ✅ |\n| ubergraph 重排、蓝图类基座、BP→C# | 🚧 |
+| 写回既有函数 + 导入解析（其余函数字节不变） | ✅ |
+| `polaris apply`：注解 mod 一条命令写回（函数 + CDO 字段）+ 出 pak | ✅ |
+| **数据注解**：`[PolarisAsset]`/`[PolarisReplace]`/`[PolarisPatch]` 放进 mod 源码 | ✅ |
+| 变量读写（赋值 / 变量作实参 / `out`、`ref` 实参） | ✅ |
+| 局部变量声明（`int x = 1;` → 补 FProperty + `EX_Let`，写回可重开） | ✅ |
+| 算术/比较表达式（`+ - * /`、`> < >= <= == !=` → `EX_CallMath`） | ✅ |
+| 条件分支（`if (x > 1)` → 比较 + `EX_JumpIfNot`） | ✅ |
+| `out`/`ref`/`const` 参数（从纯 jmap 的 CPF flags 推出） | ✅ |
+| 反编译 → 回编译字节一致（全量 Cards 语料 **6492/6492 函数**） | ✅ |
+| ubergraph 重排、蓝图类基座、BP→C# | 🚧 |
 
 ## 数据流
 

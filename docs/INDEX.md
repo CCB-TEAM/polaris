@@ -35,19 +35,21 @@
 | Assets | [`Reset`](src/Polaris.Assets/CdoEditor.md#resetcard-cardasset-name-string-cdopatch) | ✅ | 删差量条目 |
 | Assets | [`Apply`](src/Polaris.Assets/CdoEditor.md#applycard-cardasset-patches-ireadonlylistpatchspec-outdir-string-workdir-string-editreport) | ✅ | 改 → 存 → 校验 |
 | Assets | [`Verify`](src/Polaris.Assets/CdoEditor.md#verifycard-cardasset-before-ireadonlydictionarystringstring-patches-ireadonlylistpatchspec-saved-savedasset-workdir-string-verifyreport) | ✅ | 重开比对 + 函数逐字节 |
-'| Assets | [`Compare`](src/Polaris.Assets/AssetDiff.md#comparebefore-byte-after-byte-bytediff) | ✅ | 字节差异摘要 |\n'| Assets | [`Hashes`](src/Polaris.Assets/FunctionBytes.md#hashesasset-uasset-ireadonlydictionarystring-string) | ✅ | 函数字节 SHA-256 |
+| Assets | [`Compare`](src/Polaris.Assets/AssetDiff.md#comparebefore-byte-after-byte-bytediff) | ✅ | 字节差异摘要 |
+| Assets | [`Hashes`](src/Polaris.Assets/FunctionBytes.md#hashesasset-uasset-ireadonlydictionarystring-string) | ✅ | 函数字节 SHA-256 |
 | Assets | [`Replace`](src/Polaris.Assets/FunctionWriter.md#replaceasset-uasset-functionname-string-bytecode-ireadonlylistkismetexpression-int) | ✅ | 替换函数字节码 |
-'| Compiler | [`FindTargets`](src/Polaris.Compiler/ModPlanBuilder.md#findtargetscompilation-compilation-ireadonlylistmodtarget) | ✅ | 注解 → mod 计划 |
+| Compiler | [`FindTargets`](src/Polaris.Compiler/ModPlanBuilder.md#findtargetscompilation-compilation-ireadonlylistmodtarget) | ✅ | 注解 → mod 计划 |
 | Compiler | [`Decompile`](src/Polaris.Compiler/KismetDecompiler.md#decompileexpressions-ireadonlylistkismetexpression-ireadonlylistknode) | ✅ | 字节码 → 节点树 |
 | Compiler | [`Recompile`](src/Polaris.Compiler/KismetDecompiler.md#recompilenodes-ireadonlylistknode-asset-uasset-kismetexpression) | ✅ | 节点树 → 字节码 |
-| Compiler | [`Verify`](src/Polaris.Compiler/KismetDecompiler.md#verifyexpressions-ireadonlylistkismetexpression-asset-uasset-roundtripreport) | ✅ | 往返字节一致 |'
-| Compiler | [`Resolve`](src/Polaris.Compiler/AssetImportTable.md#resolveownerpath-string-functionname-string-fpackageindex) | ✅ | 类/函数 → 导入索引 |\n| Compiler | [`FindPatches`](src/Polaris.Compiler/ModPlanBuilder.md#findpatchescompilation-compilation-ireadonlylistmodpatch) | ✅ | 注解 → CDO 计划 |
+| Compiler | [`Verify`](src/Polaris.Compiler/KismetDecompiler.md#verifyexpressions-ireadonlylistkismetexpression-asset-uasset-roundtripreport) | ✅ | 往返字节一致 |
+| Compiler | [`Resolve`](src/Polaris.Compiler/AssetImportTable.md#resolveownerpath-string-functionname-string-fpackageindex) | ✅ | 类/函数 → 导入索引 |
+| Compiler | [`FindPatches`](src/Polaris.Compiler/ModPlanBuilder.md#findpatchescompilation-compilation-ireadonlylistmodpatch) | ✅ | 注解 → CDO 计划 |
 | Compiler | [`EnsureClass`](src/Polaris.Compiler/AssetImportTable.md#ensureclassownerpath-string-fpackageindex) | ✅ | 补类导入 |
 | Compiler | [`EnsurePackage`](src/Polaris.Compiler/AssetImportTable.md#ensurepackagepackagepath-string-fpackageindex) | ✅ | 补包导入 |
-| Compiler | [`EnsureFunction`](src/Polaris.Compiler/AssetImportTable.md#ensurefunctionownerpath-string-functionname-string-fpackageindex) | ✅ | 补函数导入 |'
+| Compiler | [`EnsureFunction`](src/Polaris.Compiler/AssetImportTable.md#ensurefunctionownerpath-string-functionname-string-fpackageindex) | ✅ | 补函数导入 |
 | Pak | [`RelativeContentPath`](src/Polaris.Pak/ModPak.md#relativecontentpathfilepath-string-contentroot-string-string) | ✅ | 绝对路径 → pak 内路径 |
 | Pak | [`Build`](src/Polaris.Pak/ModPak.md#buildfiles-ienumerablepakfile-pakpath-string-mountpoint-string-builtpak) | ✅ | 打包 + 读回 + 确定性自检 |
-| Pak | [`BuildAssetPair`](src/Polaris.Pak/ModPak.md#buildassetpairsourceuassetpath-string-contentroot-string-uasset-byte-uexp-byte-pakpath-string-mountpoint-string-builtpak) | ✅ | 一对 .uasset/.uexp → pak |'
+| Pak | [`BuildAssetPair`](src/Polaris.Pak/ModPak.md#buildassetpairsourceuassetpath-string-contentroot-string-uasset-byte-uexp-byte-pakpath-string-mountpoint-string-builtpak) | ✅ | 一对 .uasset/.uexp → pak |
 | Assets | [`Scan`](src/Polaris.Assets/AssetIndex.md#scanassetpaths-ireadonlyliststring-usmappath-string-assetindexresult) | 🚧 | 资产目录 → bmap |
 | Assets | [`ReadUbergraphEntries`](src/Polaris.Assets/AssetIndex.md#readubergraphentriesws-kismetworkspace-classname-string-ireadonlydictionarystringint) | 🚧 | 存根名 → 入口偏移 |
 | Assets | [`ReadCdo`](src/Polaris.Assets/AssetIndex.md#readcdoasset-uasset-classexport-classexport-cdosnapshot) | 🚧 | CDO 快照（bmap 用） |
@@ -60,12 +62,12 @@
 | Types | [`ToProperty`](src/Polaris.TypeSystem/TypeMap.md#topropertyasset-uasset-type-typesyntax-model-semanticmodel-fproperty) | 🚧 | C# → FProperty |
 | Types | [`ToCSharp`](src/Polaris.TypeSystem/TypeMap.md#tocsharpproperty-fproperty-string) | 🚧 | FProperty → C# |
 | Types | [`CreateDefault`](src/Polaris.TypeSystem/TypeMap.md#createdefaultasset-uasset-spec-memberspec-propertydata) | 🚧 | 新成员默认值 |
-'| Compiler | [`Compile`](src/Polaris.Compiler/Translator.md#compilecompilation-compilation-method-imethodsymbol-asset-uasset-resolver-ifunctionresolver-kismetexpression) | ✅ | 方法体 → 字节码 |
+| Compiler | [`Compile`](src/Polaris.Compiler/Translator.md#compilecompilation-compilation-method-imethodsymbol-asset-uasset-resolver-ifunctionresolver-kismetexpression) | ✅ | 方法体 → 字节码 |
 | Compiler | [`ScanLocals`](src/Polaris.Compiler/Translator.md#scanlocalsmethod-imethodsymbol-ireadonlylistlocalvar) | 🚧 | 局部变量 + CallFunc_* |
 | Compiler | [`ResolveVariable`](src/Polaris.Compiler/Translator.md#resolvevariablesymbol-isymbol-isout-bool-pointerarg) | 🚧 | 变量令牌 |
 | Compiler | [`EmitCall`](src/Polaris.Compiler/Translator.md#emitcallcall-invocationexpressionsyntax-model-semanticmodel-kismetexpression) | ✅ | 静态/实例调用 |
 | Compiler | [`Build`](src/Polaris.Compiler/BytecodeBuilder.md#buildasset-uasset-kismetexpression) | ✅ | 标签 → 字节偏移 |
-| Compiler | [`Run`](src/Polaris.Compiler/BytecodeCheck.md#runexpressions-ireadonlylistkismetexpression-asset-uasset-checkreport) | ✅ | 序列化回读自校验 |'
+| Compiler | [`Run`](src/Polaris.Compiler/BytecodeCheck.md#runexpressions-ireadonlylistkismetexpression-asset-uasset-checkreport) | ✅ | 序列化回读自校验 |
 | Compiler | [`Build`](src/Polaris.Compiler/UbergraphBuilder.md#buildevents-ireadonlylisteventmethod-ctx-blueprintcontext-ubergraphnode) | 🚧 | 事件体 → 规范化段 |
 | Compiler | [`RewriteStubEntries`](src/Polaris.Compiler/UbergraphBuilder.md#rewritestubentriesws-kismetworkspace-ubername-string-entries-ireadonlylistuint-stubnames-ireadonlyliststring-rewritereport) | 🚧 | 回填所有存根 |
 | Compiler | [`VerifyEntries`](src/Polaris.Compiler/UbergraphBuilder.md#verifyentriesws-kismetworkspace-ubername-string-ireadonlylistentrycheck) | 🚧 | 入口边界对账 |
@@ -73,8 +75,8 @@
 | Decompile | [`EmitMethod`](src/Polaris.Decompile/CSharpEmitter.md#emitmethodfn-functionmodel-string) | 🚧 | 函数 → C# 方法体 |
 | Decompile | [`NameSectionsByEntries`](src/Polaris.Decompile/CSharpEmitter.md#namesectionsbyentriesuber-ubergraphnode-entries-ireadonlydictionarystringint-ireadonlyliststring) | 🚧 | 用入口表命名段 |
 | SdkGen | [`Read`](src/Polaris.SdkGen/UsmapReader.md#readdata-byte-usmapfile) | ✅ | usmap 二进制 → schema |
-'| SdkGen | [`Read`](src/Polaris.SdkGen/JmapReader.md#readjson-string-ireadonlydictionarystring-jmapowner) | ✅ | functions.json → owner/函数 |
-| SdkGen | [`ReadFile`](src/Polaris.SdkGen/JmapFileReader.md#readfilepath-string-result) | ✅ | 纯 jmap → usmap 模型 |'
+| SdkGen | [`Read`](src/Polaris.SdkGen/JmapReader.md#readjson-string-ireadonlydictionarystring-jmapowner) | ✅ | functions.json → owner/函数 |
+| SdkGen | [`ReadFile`](src/Polaris.SdkGen/JmapFileReader.md#readfilepath-string-result) | ✅ | 纯 jmap → usmap 模型 |
 | SdkGen | [`Parse`](src/Polaris.SdkGen/Json.md#parsetext-string-jsonvalue) | ✅ | 最小 JSON 解析 |
 | SdkGen | [`Emit`](src/Polaris.SdkGen/SdkGenerator.md#emitusmap-usmapfile-owners-ireadonlydictionarystring-jmapowner-options-sdkoptions-sdkresult) | ✅ | 生成 SDK 声明面 |
 | SourceGen | [`Initialize`](src/Polaris.SourceGen/SdkSourceGenerator.md#initializecontext-incrementalgeneratorinitializationcontext-void) | ✅ | 增量生成器入口 |
@@ -85,11 +87,11 @@
 | Cli | [`Pak`](src/Polaris.Cli/Program.md#pakopts-options-int) | ✅ | `pak --file ... --pak ...` |
 | Cli | [`Sdk`](src/Polaris.Cli/Program.md#sdkopts-options-int) | ✅ | `sdk --usmap --catalog --out` |
 | Cli | [`Apply`](src/Polaris.Cli/Program.md#applyopts-options-int) | ✅ | 注解 mod → 写回 → pak |
-'| Cli | [`ResolveAsset`](src/Polaris.Cli/Program.md#resolveassetcontent-string-asset-string-string) | ✅ | 注解路径 → 磁盘路径 |
+| Cli | [`ResolveAsset`](src/Polaris.Cli/Program.md#resolveassetcontent-string-asset-string-string) | ✅ | 注解路径 → 磁盘路径 |
 '| Cli | [`Check`](src/Polaris.Cli/Program.md#checkopts-options-int) | ✅ | 全函数往返覆盖率 |
 | Cli | [`Decompile`](src/Polaris.Cli/Program.md#decompileopts-options-int) | ✅ | 可读伪代码 |
 '| Compiler | [`Format`](src/Polaris.Compiler/KismetText.md#formatnodes-ireadonlylistknode-asset-uasset-string) | ✅ | 节点树 → 伪代码 |
-| Compiler | [`Ensure`](src/Polaris.Compiler/LocalVariables.md#ensurefunction-functionexport-asset-uasset-name-string-propertytype-string-elementsize-int-fproperty) | ✅ | 补局部变量属性 |'''
+| Compiler | [`Ensure`](src/Polaris.Compiler/LocalVariables.md#ensurefunction-functionexport-asset-uasset-name-string-propertytype-string-elementsize-int-fproperty) | ✅ | 补局部变量属性 |
 | Cli | [`Diff`](src/Polaris.Cli/Program.md#diffbefore-string-after-string-diffreport) | 🚧 | 变更报告 |
 
 ## 3. 未实现清单（按影响面排序）
