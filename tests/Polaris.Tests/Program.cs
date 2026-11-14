@@ -51,6 +51,8 @@ internal static class TestEnv
 internal sealed class IndexResolver(Func<string, string, FPackageIndex> resolve) : IFunctionResolver
 {
     public FPackageIndex Resolve(string ownerPath, string functionName) => resolve(ownerPath, functionName);
+
+    public FPackageIndex? ResolveClass(string ownerPath) => null;
 }
 
 internal static class TestRunner

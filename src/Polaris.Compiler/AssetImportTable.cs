@@ -16,6 +16,8 @@ public sealed class AssetImportTable : IFunctionResolver
     public FPackageIndex Resolve(string ownerPath, string functionName)
         => EnsureFunction(ownerPath, functionName);
 
+    public FPackageIndex? ResolveClass(string ownerPath) => EnsureClass(ownerPath);
+
     /// <summary>确保 <c>/Script/Module.Class</c> 的类导入存在，返回其索引。</summary>
     public FPackageIndex EnsureClass(string ownerPath)
     {

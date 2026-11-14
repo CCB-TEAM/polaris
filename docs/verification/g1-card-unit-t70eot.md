@@ -136,7 +136,7 @@ targetCard.cardFunction.DrawCardsFromDeckBySide(0, ESideEnum.left, 2, true, fals
 
 产物：`D:\files\projects\.tmp\polaris\g1h\card_unit_t_70eot_g1h.pak`（7872 字节），源码 [samples/G1hMod.cs](../../samples/G1hMod.cs)。
 
-反编译：`cardFunction.DrawCardsFromDeckBySide(0, 1, 2, true, false, ids, 0f)`；`check` roundtrip 3/3。
+反编译：`cardFunction.DrawCardsFromDeckBySide(0, 1, 2, true, false, ids, 0f)`；`check` roundtrip 3/3。\n\n修正：`targetCard.cardFunction` 是**继承属性**，属性指针的 owner 必须是声明类（`BaseCardObject` 导入），不能是卡片自己的 ClassExport；已改为按字段声明类解析并重新生成 G1g/G1h。
 
 **预期**：打出该卡时从牌库抽 **2 张**。
 

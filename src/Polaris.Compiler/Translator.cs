@@ -19,6 +19,9 @@ public sealed class CompileException(string message, SyntaxNode? node = null) : 
 public interface IFunctionResolver
 {
     FPackageIndex Resolve(string ownerPath, string functionName);
+
+    /// <summary>类全路径 → 类导入；无法解析时返回 null（调用方回退到当前类）。</summary>
+    FPackageIndex? ResolveClass(string ownerPath);
 }
 
 /// <summary>
@@ -504,7 +507,7 @@ public static class Translator
         {
             IFieldSymbol field => new EX_InstanceVariable
             {
-                Variable = Pointer(field.Name, context.ClassIndex, context.Asset),
+                Variable = Pointer(field.Name, ResolveFieldOwner(field, context), context.Asset),
             },
             IParameterSymbol parameter => new EX_LocalVariable
             {
@@ -516,6 +519,17 @@ public static class Translator
             },
             _ => throw new CompileException($"接收者只支持 this/字段/参数/局部变量: {receiver}", receiver),
         };
+    }
+
+    private static FPackageIndex ResolveFieldOwner(IFieldSymbol field, Context context)
+    {
+        var declaring = GetUClassPath(field.ContainingType);
+        if (declaring is not null && context.Resolver.ResolveClass(declaring) is { } resolved)
+        {
+            return resolved;
+        }
+
+        return context.ClassIndex;
     }
 
     private static KismetPropertyPointer Pointer(string name, FPackageIndex owner, UAsset asset)
