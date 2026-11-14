@@ -121,7 +121,9 @@
 
 结论：文件里的跳转/入口偏移与当前序列化布局不一致，但整份资产的无改动保存仍逐字节一致——高度怀疑资产保存时用的是**旧版字节码格式**、运行时靠 `FBytecodeFixes` 一类逻辑修正（或段边界并不以我们解析的指令起点为准）。M4 前必须先确定这一点，否则重排会写出运行时无法执行的代码。
 
-UE 源码 `KismetCompilerVMBackend.cpp::PerformFixups` 写的是**绝对** statement 偏移
+'补充（Round 42）：**FModel 的独立反编译器同样解不开这些函数**——用户实测对卡资产报 `BlockJump` NRE 与 `Found unreached instructions (0, 23, 65, ...)`。这排除了「Polaris 解析器实现错误」，指向游戏/UE 版本的字节码偏移约定（或运行时才做的 fixup）。
+
+UE 源码 `KismetCompilerVMBackend.cpp::PerformFixups` 写的是**绝对** statement 偏移'
 （`CommitSkip(OffsetToFix, TargetStatementOffset)`），与实测不一致；怀疑与 ubergraph
 的脚本缓冲区分段/入口表有关。M4 之前需要：
 1. 找到该函数导出在 `.uexp` 中的真实脚本起点（当前按 SerialOffset 开窗没搜到字节块，说明窗定位还不准）；

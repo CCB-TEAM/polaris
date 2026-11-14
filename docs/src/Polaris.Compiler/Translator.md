@@ -66,23 +66,39 @@ return;
 - **关键分支（伪代码）**：`flags 含 FUNC_Static ? Final : (本资产导出 ? Virtual : Context)`。
 - **边界与失败**：名字歧义报错列候选；占位参数必须显式给出。
 - **调用者与被调用者**：`Compile` 调用；依赖 `IFunctionResolver`。
-'### `EmitWhile(whileStatement: WhileStatementSyntax, builder: BytecodeBuilder, context: Context): void`
+### `EmitWhile(whileStatement: WhileStatementSyntax, builder: BytecodeBuilder, context: Context): void`
 
 **状态：✅ 已实现**（测试覆盖 `while (n < 5) { ... if (n == 2) { break; } }`，`break` 已实际执行）
 
 - **签名与契约**：`start:` → `JumpIfNot(cond) -> end` → body → `Jump start` → `end:`。
-- **边界与失败**：支持 `break`/`continue`（跳 `end`/`start`，不嵌套时由 `Context.Loops` 栈解析）；不支持 `do-while`/`for`（`for` 可手写成 while）。
+- **边界与失败**：支持 `break`/`continue`（`BreakTargets`/`ContinueTargets` 栈解析）；`for` 见下节；不支持 `do-while`。
 - **调用者与被调用者**：`EmitStatements` 调用；依赖 `EmitCondition`、`BytecodeBuilder`。
 
-'### `EmitFor(forStatement: ForStatementSyntax, builder: BytecodeBuilder, context: Context): void`
+### `EmitFor(forStatement: ForStatementSyntax, builder: BytecodeBuilder, context: Context): void`
 
 **状态：✅ 已实现**（测试覆盖 `for (int i = 0; i < 3; i++) { x = x + i; }`）
 
 - **签名与契约**：声明 → 初始化 → `start:` → `JumpIfNot(cond) -> end` → body → 增量 → `Jump start` → `end:`；`i++`/`i--` 生成 `i = Add/Subtract_i(i, 1)`。
-- **边界与失败**：条件/增量必填；`++/--` 仅支持局部数值变量；`break`/`continue` 由 `Context.Loops` 栈解析。
+- **边界与失败**：条件/增量必填；`++/--` 仅支持局部数值变量；`break`/`continue` 由 `BreakTargets`/`ContinueTargets` 栈解析。
 - **调用者与被调用者**：`EmitStatements`；依赖 `EmitLocalVariable`、`EmitStep`、`EmitCondition`。
 
-### `EmitCondition(expression: ExpressionSyntax, context: Context): KismetExpression`''
+'### `EmitSwitch(switchStatement: SwitchStatementSyntax, builder: BytecodeBuilder, context: Context): void`
+
+**状态：✅ 已实现**（测试覆盖 `switch (x) { case 1/2/default ... }` 的写回 + 重开往返）
+
+- **签名与契约**：不生成 `EX_SwitchValue`，脱糖成 if/else 链：每个 case 生成 `EqualEqual_*` + `EX_JumpIfNot`，`break` 跳 switch 末尾；`default` 段直接落入。
+- **输入输出**：支持 `int`/`string`/`bool`；多个 case 标签用 `Or_BoolBool` 合并。
+- **关键分支（伪代码）**：
+  ```
+  end = NewLabel
+  for 非 default 段: JumpIfNot(EqualEqual(expr, case), next); body; Jump end; Mark next
+  default 段直接 emit
+  Mark end
+  ```
+- **边界与失败**：case 必须是常量；`break` 由 `BreakTargets` 解析；不做 fall-through。
+- **调用者与被调用者**：`EmitStatements`；依赖 `EmitExpression`、`EX_JumpIfNot`。
+
+### `EmitCondition(expression: ExpressionSyntax, context: Context): KismetExpression`'
 
 **状态：✅ 已实现**（测试「局部变量声明：写回 + 重开往返」覆盖 `if (x > 1)`）
 
@@ -90,7 +106,7 @@ return;
 - **边界与失败**：条件必须是 bool（由 Roslyn 语义模型保证）；不支持的表达式抛 `CompileException`。
 - **调用者与被调用者**：`EmitIf` 调用；依赖 `EmitExpression`。
 
-'### `EmitUnary(unary: PrefixUnaryExpressionSyntax, context: Context): KismetExpression`
+### `EmitUnary(unary: PrefixUnaryExpressionSyntax, context: Context): KismetExpression`
 
 **状态：✅ 已实现**（测试覆盖 `x = -x` 与 `b = !b`）
 
@@ -98,7 +114,7 @@ return;
 - **边界与失败**：取负仅数值类型；其它一元运算抛 `CompileException`。
 - **调用者与被调用者**：`EmitExpression` 调用。
 
-'### `EnumConstant(field: IFieldSymbol, context: Context): KismetExpression`
+### `EnumConstant(field: IFieldSymbol, context: Context): KismetExpression`
 
 **状态：✅ 已实现**（测试「枚举成员 → 常量（ByteConst）」）
 
@@ -106,7 +122,7 @@ return;
 - **边界与失败**：只有 `HasConstantValue` 的枚举成员走这里；普通字段仍走变量指针。
 - **调用者与被调用者**：`EmitExpression` 调用。
 
-### `EmitBinary(binary: BinaryExpressionSyntax, context: Context): KismetExpression`''
+### `EmitBinary(binary: BinaryExpressionSyntax, context: Context): KismetExpression`
 
 **状态：✅ 已实现**（测试「局部变量声明：写回 + 重开往返」覆盖 `x = x + 2` 与 `if (x > 1)`）
 

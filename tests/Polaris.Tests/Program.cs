@@ -938,7 +938,7 @@ internal static class TestRunner
             True(function.LoadedProperties.Length == before + 6, $"局部变量属性 {before} -> {function.LoadedProperties.Length}");
             True(expressions.OfType<EX_Let>().Any(), "含局部变量赋值");
             True(expressions.OfType<EX_Let>().Any(l => l.Expression is EX_CallMath), "含数学调用（x + 2）");
-            True(expressions.OfType<EX_JumpIfNot>().Any(j => j.BooleanExpression is EX_CallMath or EX_LocalVariable), "条件（比较或变量）");
+            True(expressions.OfType<EX_JumpIfNot>().Count() >= 3, "条件分支（if + switch）");
             True(BytecodeCheck.Run(expressions, card.Asset).Ok, "字节码自校验");
 
             FunctionWriter.Replace(card.Asset, "OnPlayedFromHand", expressions);

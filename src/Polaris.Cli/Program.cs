@@ -73,6 +73,11 @@ internal static class Cli
                 return Ubergraph(Parse(args.Skip(1).ToArray()));
             }
 
+            if (args[0] == "offsets")
+            {
+                return Offsets(Parse(args.Skip(1).ToArray()));
+            }
+
             if (args[0] == "pak")
             {
                 return Pak(Parse(args.Skip(1).ToArray()));
@@ -475,6 +480,47 @@ internal static class Cli
         }
 
         Console.WriteLine($"ok       {replacedTotal} 个函数写回，{patchedTotal} 个 CDO 字段");
+        return 0;
+    }
+
+    private static int Offsets(Options opts)
+    {
+        var card = CardAsset.Open(opts.Require("asset"), opts.Require("usmap"), opts.Work);
+        var name = opts.Require("function");
+        var function = card.Asset.Exports.OfType<UAssetAPI.ExportTypes.FunctionExport>()
+            .FirstOrDefault(f => f.ObjectName.ToString() == name);
+        if (function?.ScriptBytecode is not { Length: > 0 })
+        {
+            Console.Error.WriteLine("找不到函数或函数没有字节码: " + name);
+            return 1;
+        }
+
+        var block = SerializeExpressions(function.ScriptBytecode, card.Asset);
+        var starts = ParseStarts(block, card.Asset).ToHashSet();
+        var offset = 0;
+        for (var i = 0; i < function.ScriptBytecode.Length; i++)
+        {
+            var expression = function.ScriptBytecode[i];
+            var size = SerializeExpressions([expression], card.Asset).Length;
+            var line = $"  #{i} @{offset} {expression.Token}";
+            switch (expression)
+            {
+                case UAssetAPI.Kismet.Bytecode.Expressions.EX_Jump jump:
+                    line += $" -> {jump.CodeOffset} landed={starts.Contains(jump.CodeOffset)}";
+                    break;
+                case UAssetAPI.Kismet.Bytecode.Expressions.EX_JumpIfNot jumpIfNot:
+                    line += $" -> {jumpIfNot.CodeOffset} landed={starts.Contains(jumpIfNot.CodeOffset)} cond={jumpIfNot.BooleanExpression.Token}";
+                    break;
+                case UAssetAPI.Kismet.Bytecode.Expressions.EX_ComputedJump computed:
+                    line += $" operand={computed.CodeOffsetExpression.Token}";
+                    break;
+            }
+
+            Console.WriteLine(line);
+            offset += size;
+        }
+
+        Console.WriteLine($"bytes      {block.Length}  starts={starts.Count}");
         return 0;
     }
 

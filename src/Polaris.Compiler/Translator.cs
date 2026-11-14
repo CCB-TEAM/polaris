@@ -84,7 +84,8 @@ public static class Translator
         FPackageIndex ClassIndex,
         UAssetAPI.ExportTypes.FunctionExport? TargetFunction)
     {
-        public Stack<(int Start, int End)> Loops { get; } = new();
+        public Stack<int> BreakTargets { get; } = new();
+        public Stack<int> ContinueTargets { get; } = new();
     }
 
     private static bool EmitStatements(
@@ -111,6 +112,10 @@ public static class Translator
                     EmitWhile(whileStatement, builder, context);
                     break;
 
+                case SwitchStatementSyntax switchStatement:
+                    EmitSwitch(switchStatement, builder, context);
+                    break;
+
                 case ForStatementSyntax forStatement:
                     EmitFor(forStatement, builder, context);
                     break;
@@ -120,21 +125,21 @@ public static class Translator
                     break;
 
                 case BreakStatementSyntax:
-                    if (context.Loops.Count == 0)
+                    if (context.BreakTargets.Count == 0)
                     {
-                        throw new CompileException("break 不在循环里", statement);
+                        throw new CompileException("break 不在循环/switch 里", statement);
                     }
 
-                    builder.EmitJump(context.Loops.Peek().End);
+                    builder.EmitJump(context.BreakTargets.Peek());
                     break;
 
                 case ContinueStatementSyntax:
-                    if (context.Loops.Count == 0)
+                    if (context.ContinueTargets.Count == 0)
                     {
                         throw new CompileException("continue 不在循环里", statement);
                     }
 
-                    builder.EmitJump(context.Loops.Peek().Start);
+                    builder.EmitJump(context.ContinueTargets.Peek());
                     break;
 
                 case LocalDeclarationStatementSyntax local:
@@ -197,11 +202,13 @@ public static class Translator
 
         builder.MarkLabel(startLabel);
         builder.EmitJumpIfNot(EmitCondition(whileStatement.Condition, context), endLabel);
-        context.Loops.Push((startLabel, endLabel));
+        context.BreakTargets.Push(endLabel);
+        context.ContinueTargets.Push(startLabel);
         EmitStatements(whileStatement.Statement is BlockSyntax block
             ? block.Statements
             : [whileStatement.Statement], builder, context);
-        context.Loops.Pop();
+        context.ContinueTargets.Pop();
+        context.BreakTargets.Pop();
         builder.EmitJump(startLabel);
         builder.MarkLabel(endLabel);
     }
@@ -225,11 +232,13 @@ public static class Translator
         var endLabel = builder.NewLabel();
         builder.MarkLabel(startLabel);
         builder.EmitJumpIfNot(EmitCondition(forStatement.Condition, context), endLabel);
-        context.Loops.Push((startLabel, endLabel));
+        context.BreakTargets.Push(endLabel);
+        context.ContinueTargets.Push(startLabel);
         EmitStatements(forStatement.Statement is BlockSyntax block
             ? block.Statements
             : [forStatement.Statement], builder, context);
-        context.Loops.Pop();
+        context.ContinueTargets.Pop();
+        context.BreakTargets.Pop();
 
         foreach (var incrementor in forStatement.Incrementors)
         {
@@ -297,6 +306,63 @@ public static class Translator
                 Parameters = [pointer, one],
             },
         });
+    }
+
+    private static void EmitSwitch(SwitchStatementSyntax switchStatement, BytecodeBuilder builder, Context context)
+    {
+        var endLabel = builder.NewLabel();
+        var switchType = context.Model.GetTypeInfo(switchStatement.Expression).Type;
+        var suffix = switchType?.SpecialType switch
+        {
+            SpecialType.System_Int32 => "IntInt",
+            SpecialType.System_String => "StrStr",
+            SpecialType.System_Boolean => "BoolBool",
+            _ => throw new CompileException($"switch 暂不支持 {switchType}", switchStatement),
+        };
+
+        foreach (var section in switchStatement.Sections)
+        {
+            if (section.Labels.Any(l => l is DefaultSwitchLabelSyntax))
+            {
+                context.BreakTargets.Push(endLabel);
+                EmitStatements(section.Statements, builder, context);
+                context.BreakTargets.Pop();
+                continue;
+            }
+
+            var caseLabels = section.Labels.OfType<CaseSwitchLabelSyntax>().ToList();
+            if (caseLabels.Count == 0)
+            {
+                continue;
+            }
+
+            var nextLabel = builder.NewLabel();
+            KismetExpression? condition = null;
+            foreach (var label in caseLabels)
+            {
+                var equals = new EX_CallMath
+                {
+                    StackNode = context.Resolver.Resolve("/Script/Engine.KismetMathLibrary", "EqualEqual_" + suffix),
+                    Parameters = [EmitExpression(switchStatement.Expression, context), EmitExpression(label.Value, context)],
+                };
+                condition = condition is null
+                    ? equals
+                    : new EX_CallMath
+                    {
+                        StackNode = context.Resolver.Resolve("/Script/Engine.KismetMathLibrary", "Or_BoolBool"),
+                        Parameters = [condition, equals],
+                    };
+            }
+
+            builder.EmitJumpIfNot(condition!, nextLabel);
+            context.BreakTargets.Push(endLabel);
+            EmitStatements(section.Statements, builder, context);
+            context.BreakTargets.Pop();
+            builder.EmitJump(endLabel);
+            builder.MarkLabel(nextLabel);
+        }
+
+        builder.MarkLabel(endLabel);
     }
 
     private static KismetExpression EmitCondition(ExpressionSyntax expression, Context context)

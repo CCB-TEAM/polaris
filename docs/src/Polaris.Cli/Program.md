@@ -162,3 +162,13 @@
   ```
 - **边界与失败**：没有 ubergraph 返回 1；入口表语义仍未解（见 PLAN §9）。
 - **调用者与被调用者**：`polaris ubergraph`；调用 `CardAsset`、`ExpressionSerializer`。
+
+### `Offsets(opts: Options): int`
+
+**状态：✅ 已实现**（`card_unit_t_70eot` 原卡 ubergraph：多条 `EX_Jump` 目标 `525/10/202` 均 `landed=False`）
+
+- **签名与契约**：`polaris offsets --asset <uasset> --function <name> --usmap <usmap>`；逐条打印语句偏移、跳转目标、是否落在指令起点。
+- **输入输出**：只读；用于定位「跳转目标不落在语句起点」的函数（M4/反编译问题）。
+- **关键分支（伪代码）**：序列化 → 顺序回读得 starts → 逐表达式打印 token/offset → Jump/JumpIfNot 打印 `CodeOffset` 与 landed。
+- **边界与失败**：函数不存在或无字节码返回 1。
+- **调用者与被调用者**：`polaris offsets`；调用 `CardAsset`、`ExpressionSerializer`。
