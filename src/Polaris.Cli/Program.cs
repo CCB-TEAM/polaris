@@ -298,32 +298,63 @@ internal static class Cli
 
     private static int Check(Options opts)
     {
-        var assetPath = opts.Require("asset");
-        var card = CardAsset.Open(assetPath, opts.Require("usmap"), opts.Work);
+        var usmap = opts.Require("usmap");
+        var files = new List<string>();
+        if (opts.Values.TryGetValue("asset", out var assetPath))
+        {
+            files.Add(assetPath);
+        }
+        else if (opts.Values.TryGetValue("dir", out var dir))
+        {
+            files.AddRange(Directory.EnumerateFiles(dir, "*.uasset", SearchOption.AllDirectories));
+        }
+        else
+        {
+            Console.Error.WriteLine("用法: check --asset <uasset> 或 --dir <Blueprints 目录> --usmap <usmap>");
+            return 2;
+        }
+
         var ok = 0;
         var total = 0;
+        var assets = 0;
         var failures = new List<string>();
 
-        foreach (var function in card.Asset.Exports.OfType<UAssetAPI.ExportTypes.FunctionExport>())
+        var skipped = 0;
+        foreach (var path in files)
         {
-            if (function.ScriptBytecode is not { Length: > 0 })
+            CardAsset card;
+            try
             {
+                card = CardAsset.Open(path, usmap, opts.Work);
+            }
+            catch (Exception)
+            {
+                skipped++;
                 continue;
             }
 
-            total++;
-            var report = RoundTrip.Verify(function.ScriptBytecode, card.Asset);
-            if (report.Ok)
+            assets++;
+            foreach (var function in card.Asset.Exports.OfType<UAssetAPI.ExportTypes.FunctionExport>())
             {
-                ok++;
-            }
-            else
-            {
-                failures.Add($"{function.ObjectName}: {report.Error}");
+                if (function.ScriptBytecode is not { Length: > 0 })
+                {
+                    continue;
+                }
+
+                total++;
+                var report = RoundTrip.Verify(function.ScriptBytecode, card.Asset);
+                if (report.Ok)
+                {
+                    ok++;
+                }
+                else
+                {
+                    failures.Add($"{Path.GetFileName(path)}.{function.ObjectName}: {report.Error}");
+                }
             }
         }
 
-        Console.WriteLine($"roundtrip {ok}/{total}（{(total == 0 ? 100.0 : 100.0 * ok / total):F1}%）");
+        Console.WriteLine($"roundtrip {ok}/{total}（{(total == 0 ? 100.0 : 100.0 * ok / total):F1}%） across {assets} assets，skipped {skipped}");
         foreach (var failure in failures.Take(10))
         {
             Console.WriteLine("  " + failure);
