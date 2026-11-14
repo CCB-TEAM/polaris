@@ -208,9 +208,18 @@ internal static class Cli
             refs.Add(MetadataReference.CreateFromFile(sdkDll));
         }
 
+        var trees = new List<SyntaxTree> { CSharpSyntaxTree.ParseText(source, path: modPath) };
+        if (opts.Values.TryGetValue("sdk-source", out var sdkSource))
+        {
+            foreach (var file in Directory.EnumerateFiles(sdkSource, "*.cs", SearchOption.AllDirectories))
+            {
+                trees.Add(CSharpSyntaxTree.ParseText(File.ReadAllText(file), path: file));
+            }
+        }
+
         var compilation = CSharpCompilation.Create(
             "PolarisApply",
-            [CSharpSyntaxTree.ParseText(source, path: modPath)],
+            trees,
             refs,
             new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
 

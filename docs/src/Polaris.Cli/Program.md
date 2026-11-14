@@ -89,7 +89,7 @@
       save; reopen; 其余函数哈希不变? else 失败
       if --pak: ModPak.Build
   ```
-- **边界与失败**：无标注/资产或函数不存在 → 退出 1；不覆盖输入资产；生成 SDK 以 DLL 传入（CLI 不运行时生成）。
+- **边界与失败**：无标注/资产或函数不存在 → 退出 1；不覆盖输入资产；生成 SDK 可传 DLL（`--sdk`）或直接传源码目录（`--sdk-source`，把生成器输出一起编进 mod 编译单元）。
 - **调用者与被调用者**：`polaris apply`；调用 `ModPlanBuilder`、`Translator`、`BytecodeCheck`、`FunctionWriter`、`CardAsset`、`ModPak`、`ResolveAsset`。
 
 ### `ResolveAsset(content: string, asset: string): string`
