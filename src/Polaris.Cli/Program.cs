@@ -223,16 +223,42 @@ internal static class Cli
         }
 
         var targets = ModPlanBuilder.FindTargets(compilation);
-        if (targets.Count == 0)
+        var patches = ModPlanBuilder.FindPatches(compilation);
+        if (targets.Count == 0 && patches.Count == 0)
         {
-            Console.Error.WriteLine("没有 [PolarisAsset]/[PolarisReplace] 标注");
+            Console.Error.WriteLine("没有 [PolarisAsset]/[PolarisReplace]/[PolarisPatch] 标注");
             return 1;
         }
 
-        var replacedTotal = 0;
-        foreach (var group in targets.GroupBy(t => ResolveAsset(content, t.AssetPath)))
+        var plan = new SortedDictionary<string, (List<ModTarget> Targets, List<ModPatch> Patches)>(StringComparer.OrdinalIgnoreCase);
+        foreach (var target in targets)
         {
-            var assetPath = group.Key;
+            var path = ResolveAsset(content, target.AssetPath);
+            if (!plan.TryGetValue(path, out var entry))
+            {
+                entry = (new List<ModTarget>(), new List<ModPatch>());
+                plan[path] = entry;
+            }
+
+            entry.Targets.Add(target);
+        }
+
+        foreach (var patch in patches)
+        {
+            var path = ResolveAsset(content, patch.AssetPath);
+            if (!plan.TryGetValue(path, out var entry))
+            {
+                entry = (new List<ModTarget>(), new List<ModPatch>());
+                plan[path] = entry;
+            }
+
+            entry.Patches.Add(patch);
+        }
+
+        var replacedTotal = 0;
+        var patchedTotal = 0;
+        foreach (var (assetPath, entry) in plan)
+        {
             if (!File.Exists(assetPath))
             {
                 Console.Error.WriteLine("找不到资产: " + assetPath);
@@ -244,7 +270,7 @@ internal static class Cli
             var imports = new AssetImportTable(card.Asset);
             var replaced = new HashSet<string>(StringComparer.Ordinal);
 
-            foreach (var target in group)
+            foreach (var target in entry.Targets)
             {
                 var function = card.Asset.Exports.OfType<UAssetAPI.ExportTypes.FunctionExport>()
                     .FirstOrDefault(f => f.ObjectName.ToString() == target.FunctionName)
@@ -272,9 +298,25 @@ internal static class Cli
                 Console.WriteLine($"mod      {Path.GetFileName(assetPath)} :: {target.FunctionName}（{bytecode.Length} 条）");
             }
 
+            foreach (var patch in entry.Patches)
+            {
+                if (patch.Value.Length == 0)
+                {
+                    CdoEditor.Reset(card, patch.Field);
+                    Console.WriteLine($"patch    {Path.GetFileName(assetPath)} :: {patch.Field} = (reset)");
+                }
+                else
+                {
+                    CdoEditor.Set(card, patch.Field, patch.Value);
+                    Console.WriteLine($"patch    {Path.GetFileName(assetPath)} :: {patch.Field} = {patch.Value}");
+                }
+
+                patchedTotal++;
+            }
+
             if (dryRun)
             {
-                Console.WriteLine($"plan     {Path.GetFileName(assetPath)}：{replaced.Count} 个函数（dry-run，不写盘）");
+                Console.WriteLine($"plan     {Path.GetFileName(assetPath)}：{replaced.Count} 个函数 / {entry.Patches.Count} 个 CDO 字段（dry-run，不写盘）");
                 replacedTotal += replaced.Count;
                 continue;
             }
@@ -309,6 +351,17 @@ internal static class Cli
                 }
             }
 
+            var snapshot = reopened.Snapshot();
+            foreach (var patch in entry.Patches)
+            {
+                var present = snapshot.ContainsKey(patch.Field);
+                if (patch.Value.Length == 0 ? present : !present)
+                {
+                    Console.Error.WriteLine($"CDO 字段校验失败: {patch.Field}");
+                    return 1;
+                }
+            }
+
             if (opts.Values.TryGetValue("pak", out var pakPath))
             {
                 var relative = ModPak.RelativeContentPath(assetPath);
@@ -325,7 +378,7 @@ internal static class Cli
             replacedTotal += replaced.Count;
         }
 
-        Console.WriteLine($"ok       {replacedTotal} 个函数写回");
+        Console.WriteLine($"ok       {replacedTotal} 个函数写回，{patchedTotal} 个 CDO 字段");
         return 0;
     }
 

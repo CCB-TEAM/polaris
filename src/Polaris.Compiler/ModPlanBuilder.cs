@@ -9,6 +9,9 @@ public sealed record ModTarget(
     string AssetPath,
     string FunctionName);
 
+/// <summary>一条「类上的 CDO 改值」绑定。</summary>
+public sealed record ModPatch(string AssetPath, string Field, string Value);
+
 /// <summary>
 /// 扫描编译单元里的数据注解，产出 mod 计划：
 /// <c>[PolarisAsset("...uasset")]</c> 标在类上，<c>[PolarisReplace("函数名")]</c> 标在方法上。
@@ -40,6 +43,36 @@ public static class ModPlanBuilder
         }
 
         return targets;
+    }
+
+    public static IReadOnlyList<ModPatch> FindPatches(Compilation compilation)
+    {
+        var patches = new List<ModPatch>();
+        foreach (var type in AllTypes(compilation.Assembly.GlobalNamespace))
+        {
+            var assetPath = GetString(type.GetAttributes(), "PolarisAssetAttribute");
+            if (assetPath is null)
+            {
+                continue;
+            }
+
+            foreach (var attribute in type.GetAttributes())
+            {
+                if (attribute.AttributeClass?.Name != "PolarisPatchAttribute")
+                {
+                    continue;
+                }
+
+                var field = attribute.ConstructorArguments[0].Value as string;
+                var value = attribute.ConstructorArguments[1].Value as string;
+                if (field is not null && value is not null)
+                {
+                    patches.Add(new ModPatch(assetPath, field, value));
+                }
+            }
+        }
+
+        return patches;
     }
 
     private static IEnumerable<INamedTypeSymbol> AllTypes(INamespaceSymbol ns)

@@ -21,7 +21,7 @@
 | `Polaris.Sdk` | [Runtime](src/Polaris.Sdk/Runtime.md) | ✅ 1 | 生成代码引用的运行时声明 |
 | `Polaris.Cli` | [Program](src/Polaris.Cli/Program.md) | ✅ 9 · 🚧 1 | `cards/pak/sdk/apply/check/decompile`；`scan/diff` 待做 |
 
-构建与验证：`.\run.ps1 build`（Solstice.Kismet → Sdk → SdkGen → SourceGen → Assets → Pak → Cli → Tests）、`.\run.ps1 verify`（22 个用例 + 编译闸 + 真实资产 roundtrip）；`check-all` 全量 6492/6492。
+构建与验证：`.\run.ps1 build`（Solstice.Kismet → Sdk → SdkGen → SourceGen → Assets → Pak → Cli → Tests）、`.\run.ps1 verify`（23 个用例 + 编译闸 + 真实资产 roundtrip）；`check-all` 全量 6492/6492。
 
 ## 2. 函数状态看板
 
@@ -41,7 +41,7 @@
 | Compiler | [`Decompile`](src/Polaris.Compiler/KismetDecompiler.md#decompileexpressions-ireadonlylistkismetexpression-ireadonlylistknode) | ✅ | 字节码 → 节点树 |
 | Compiler | [`Recompile`](src/Polaris.Compiler/KismetDecompiler.md#recompilenodes-ireadonlylistknode-asset-uasset-kismetexpression) | ✅ | 节点树 → 字节码 |
 | Compiler | [`Verify`](src/Polaris.Compiler/KismetDecompiler.md#verifyexpressions-ireadonlylistkismetexpression-asset-uasset-roundtripreport) | ✅ | 往返字节一致 |'
-| Compiler | [`Resolve`](src/Polaris.Compiler/AssetImportTable.md#resolveownerpath-string-functionname-string-fpackageindex) | ✅ | 类/函数 → 导入索引 |
+| Compiler | [`Resolve`](src/Polaris.Compiler/AssetImportTable.md#resolveownerpath-string-functionname-string-fpackageindex) | ✅ | 类/函数 → 导入索引 |\n| Compiler | [`FindPatches`](src/Polaris.Compiler/ModPlanBuilder.md#findpatchescompilation-compilation-ireadonlylistmodpatch) | ✅ | 注解 → CDO 计划 |
 | Compiler | [`EnsureClass`](src/Polaris.Compiler/AssetImportTable.md#ensureclassownerpath-string-fpackageindex) | ✅ | 补类导入 |
 | Compiler | [`EnsurePackage`](src/Polaris.Compiler/AssetImportTable.md#ensurepackagepackagepath-string-fpackageindex) | ✅ | 补包导入 |
 | Compiler | [`EnsureFunction`](src/Polaris.Compiler/AssetImportTable.md#ensurefunctionownerpath-string-functionname-string-fpackageindex) | ✅ | 补函数导入 |'

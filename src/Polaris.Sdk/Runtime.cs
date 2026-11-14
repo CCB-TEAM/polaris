@@ -99,6 +99,14 @@ public sealed class PolarisAssetAttribute(string path) : Attribute
     public string Path { get; } = path;
 }
 
+/// <summary>Polaris mod 注解：CDO 字段改值（空字符串表示 Reset）。可重复。</summary>
+[AttributeUsage(AttributeTargets.Class, AllowMultiple = true, Inherited = false)]
+public sealed class PolarisPatchAttribute(string field, string value) : Attribute
+{
+    public string Field { get; } = field;
+    public string Value { get; } = value;
+}
+
 /// <summary>Polaris mod 注解：这个方法要替换的目标 UFunction 名。</summary>
 [AttributeUsage(AttributeTargets.Method, Inherited = false)]
 public sealed class PolarisReplaceAttribute(string function) : Attribute

@@ -97,6 +97,7 @@ internal static class TestRunner
         FloatConstants(env, root);
         DecompileText(env, root);
         LocalVariableWriteback(env, root);
+        ModPatches();
         Errors(env, root);
 
         Console.WriteLine();
@@ -932,6 +933,41 @@ internal static class TestRunner
             Equal(before + 1, target.LoadedProperties.Length);
             var report = RoundTrip.Verify(target.ScriptBytecode!, reopened.Asset);
             True(report.Ok, "重开往返: " + report.Error);
+        });
+    }
+
+    private static void ModPatches()
+    {
+        Case("数据注解：[PolarisPatch] → CDO 计划", () =>
+        {
+            const string source = """
+                using Polaris.Sdk;
+
+                [PolarisAsset("Blueprints/Cards/Soviet/Allegiance/units/card_unit_t_70eot.uasset")]
+                [PolarisPatch("kredits", "4")]
+                [PolarisPatch("hasBlitz", "true")]
+                public class PatchMod
+                {
+                }
+                """;
+
+            var references = ((string)AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES")!)
+                .Split(Path.PathSeparator)
+                .Select(p => MetadataReference.CreateFromFile(p))
+                .ToList();
+            references.Add(MetadataReference.CreateFromFile(typeof(Polaris.Sdk.UObject).Assembly.Location));
+            var compilation = CSharpCompilation.Create(
+                "PatchProbe",
+                [CSharpSyntaxTree.ParseText(source)],
+                references,
+                new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
+
+            var patches = ModPlanBuilder.FindPatches(compilation);
+            Equal(2, patches.Count);
+            Equal("kredits", patches[0].Field);
+            Equal("4", patches[0].Value);
+            Equal("hasBlitz", patches[1].Field);
+            Equal("true", patches[1].Value);
         });
     }
 

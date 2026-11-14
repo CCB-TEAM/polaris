@@ -22,3 +22,13 @@
   ```
 - **边界与失败**：同名注解重复时按出现顺序都保留；不校验资产是否存在（由写回阶段报错）。
 - **调用者与被调用者**：`samples/BytecodeMod`、未来的 `polaris apply` 调用；只读 Roslyn 符号。
+
+### `FindPatches(compilation: Compilation): IReadOnlyList<ModPatch>`
+
+**状态：✅ 已实现**（测试「数据注解：[PolarisPatch] → CDO 计划」）
+
+- **签名与契约**：扫描带 `[PolarisAsset]` 的类上的 `[PolarisPatch(field, value)]`（可重复）；返回 `ModPatch(AssetPath, Field, Value)`。
+- **输入输出**：`Value` 为空串表示 Reset；不校验字段是否存在（由 `CdoEditor` 在写回时报错）。
+- **关键分支（伪代码）**：`foreach type with [PolarisAsset]: foreach [PolarisPatch]: add(asset, field, value)`。
+- **边界与失败**：没有 `[PolarisAsset]` 的类整类跳过；注解参数缺失时跳过该条。
+- **调用者与被调用者**：`polaris apply` 调用。
