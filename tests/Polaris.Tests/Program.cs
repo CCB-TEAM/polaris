@@ -792,7 +792,6 @@ internal static class TestRunner
         });
     }
 
-
     private static void Errors(TestContext env, string root)
     {
         Case("错误路径：未知成员 / 不支持类型 / 本类属性", () =>
