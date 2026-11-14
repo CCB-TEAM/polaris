@@ -263,6 +263,7 @@ internal static class Cli
         var replacedTotal = 0;
         var patchedTotal = 0;
         var multiAsset = plan.Count > 1;
+        var builtPaths = new List<string>();
         foreach (var (assetPath, entry) in plan)
         {
             if (!File.Exists(assetPath))
@@ -400,9 +401,34 @@ internal static class Cli
                     targetPak,
                     opts.Mount);
                 Console.WriteLine($"pak      {built.PakPath}（{built.Bytes.Length} 字节 / {built.Archive.Entries.Count} 条目）");
+                builtPaths.Add(built.PakPath);
             }
 
             replacedTotal += replaced.Count;
+        }
+
+        if (!dryRun)
+        {
+            var manifest = new
+            {
+                tool = "polaris apply",
+                mod = Path.GetFileName(modPath),
+                content,
+                usmap,
+                assets = plan.Keys.Select(p => new
+                {
+                    asset = Path.GetFileName(p),
+                    functions = plan[p].Targets.Select(t => t.FunctionName).ToArray(),
+                    patches = plan[p].Patches.Select(patch => new { field = patch.Field, value = patch.Value }).ToArray(),
+                }).ToArray(),
+                paks = builtPaths.ToArray(),
+                createdAt = DateTimeOffset.UtcNow.ToString("O"),
+            };
+            var manifestPath = Path.Combine(outDir, "mod.json");
+            Directory.CreateDirectory(outDir);
+            File.WriteAllText(manifestPath, System.Text.Json.JsonSerializer.Serialize(manifest,
+                new System.Text.Json.JsonSerializerOptions { WriteIndented = true }));
+            Console.WriteLine($"manifest {manifestPath}");
         }
 
         Console.WriteLine($"ok       {replacedTotal} 个函数写回，{patchedTotal} 个 CDO 字段");

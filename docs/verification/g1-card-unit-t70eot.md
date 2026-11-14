@@ -9,7 +9,7 @@
 | 文件 | 说明 |
 |---|---|
 | `D:\files\projects\.tmp\polaris\g1\card_unit_t_70eot.pak` | 7650 字节 / 2 条目（uasset + uexp） |
-| `D:\files\projects\.tmp\polaris\g1\card_unit_t_70eot.uasset` | 写回后的资产（便于 diff/复查） |
+| `D:\files\projects\.tmp\polaris\g1\card_unit_t_70eot.uasset` | 写回后的资产（便于 diff/复查） |\n| `D:\files\projects\.tmp\polaris\g1\mod.json` | 清单（资产/函数/patch） |
 | `samples/G1Mod.cs` | 生成它的 mod 源码（已入库） |
 
 pak 内路径：`Blueprints/Cards/Soviet/Allegiance/units/card_unit_t_70eot.uasset` / `.uexp`
@@ -45,7 +45,37 @@ mount：`../../../kards/Content/`
 - 次观察现象（攻击变化值）
 - 若有异常：游戏日志 + 截图；以及是否出现「pak 无法加载」类错误
 
-## 6. 已知风险
+'## 6. 实测结果（2026-11）
+
+**✅ 通过**（用户实测：pak 进游戏后生效）。这说明：
+
+- UAssetAPI 写回 + v3/store pak 打包 + mount 路径，在真实游戏里可用；
+- 我们生成的 `OnPlayedFromHand` 字节码（含 `EX_Context` + `EX_FinalFunction`）运行期可执行；
+- CDO 差量写入（`kredits` 2 → 0）运行期生效。
+
+'## 7. G1b：语言特性验证（待测）
+
+产物：`D:\files\projects\.tmp\polaris\g1b\card_unit_t_70eot_g1b.pak`（8088 字节），源码 [samples/G1bMod.cs](../../samples/G1bMod.cs)。
+
+同一张卡，函数体换成：
+
+```csharp
+int x = 1;
+x = x + 2;              // 3
+if (x > 2) { x = x + 1; } else { x = x + 2; }   // 4
+targetCard.CampaignAddAttack(x, false);
+```
+
+**预期**：打出该卡时攻击 **+4**（G1 是 +5，可区分）。
+
+步骤：
+1. 先删掉 G1 的 `card_unit_t_70eot.pak`（同资产两个 pak 会冲突）；
+2. 放入 `card_unit_t_70eot_g1b.pak`，启动游戏；
+3. 对局打出该卡，观察攻击加成是否为 **+4**。
+
+这一包同时验证：局部变量（`EX_Let` + 新 FProperty）、算术（`EX_CallMath`）、分支（`EX_JumpIfNot`/`EX_Jump`）、参数传递（`EX_Context`）。
+
+## 8. 已知风险''
 
 - 该资产的跳转/入口偏移与解析布局不一致（见 `docs/PLAN.md §9`），但我们替换的是**平坦函数** `OnPlayedFromHand`，不触碰 ubergraph 段重排；写回后已通过 `RoundTrip.Verify`。
 - 若游戏启动即崩，优先怀疑 pak 格式/挂载路径；可用 `polaris pak` 重新核对条目路径。

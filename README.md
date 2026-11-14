@@ -24,7 +24,7 @@ Polaris 是「**自研编译器 + UHT 风格 SDK**」的组合：
 | mod `.pak` 导出（v3 / store / mount `../../../kards/Content/`，对真实 mod pak 逐字节验证） | ✅ |
 | 编译器：静态/实例调用、`if-else`、`return`、`out/ref`、int/bool/string/float/double 字面量 | ✅ |
 | 写回既有函数 + 导入解析（其余函数字节不变） | ✅ |
-| `polaris apply`：注解 mod 一条命令写回（函数 + CDO 字段）+ 出 pak；多资产时每卡一个 pak；参数名不匹配直接报错 | ✅ |
+| `polaris apply`：注解 mod 一条命令写回（函数 + CDO 字段）+ 出 pak；多资产时每卡一个 pak；参数名不匹配直接报错；输出目录写 `mod.json` 清单 | ✅ |
 | **数据注解**：`[PolarisAsset]`/`[PolarisReplace]`/`[PolarisPatch]` 放进 mod 源码 | ✅ |
 | 变量读写（赋值 / 变量作实参 / `out`、`ref` 实参） | ✅ |
 | `return` 带返回值（`return 5;` → `EX_Return(IntConst)`） | ✅ |
@@ -165,7 +165,10 @@ tests/                  Polaris.Tests（24 个用例）
 - 运行期行为**未在游戏内验证**（静态闸全绿不等于运行正确）。
 - 不新增资产（不做新卡）；不做可视化编辑器。
 
-## 运行期验证
+'## 运行期验证 ✅
+
+**G1 已通过**：`card_unit_t_70eot` 的 mod pak（CDO `kredits` 2 → 0 + `OnPlayedFromHand` 字节码替换）在真实游戏里生效。
+细节与复现步骤：[docs/verification/g1-card-unit-t70eot.md](docs/verification/g1-card-unit-t70eot.md)。'
 
 G1（游戏内）验证包与步骤：[docs/verification/g1-card-unit-t70eot.md](docs/verification/g1-card-unit-t70eot.md)（`kredits` 0 + 打出攻击 +5，pak 在 `..\.tmp\polaris\g1`）。
 
