@@ -2,7 +2,7 @@
 
 **当前阶段：M1 原生 SDK + M2 CDO + mod pak 导出已落地（静态闸全绿，运行期待验）。** 最近更新：2026-12。
 
-- 路线与闸门：[PLAN.md](PLAN.md) · 卡属性字段：[card-fields.md](card-fields.md) · 现在的 mod 怎么写：[mod-cs.md](mod-cs.md) · 数据流向：[dataflow.md](dataflow.md)
+- 写 mod：[mod-authoring.md](mod-authoring.md) · 路线与闸门：[PLAN.md](PLAN.md) · 卡属性字段：[card-fields.md](card-fields.md) · 现在的 mod 怎么写：[mod-cs.md](mod-cs.md) · 数据流向：[dataflow.md](dataflow.md)
 - 架构与数据流：[architecture.md](architecture.md)
 - 拍板记录：[decisions/](decisions/)
 - 调研原始材料（不在本仓库）：`D:\files\projects\polaris-research\`

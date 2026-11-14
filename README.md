@@ -173,7 +173,11 @@ tests/                  Polaris.Tests（24 个用例）
 
 G1（游戏内）验证包与步骤：[docs/verification/g1-card-unit-t70eot.md](docs/verification/g1-card-unit-t70eot.md)（`kredits` 0 + 打出攻击 +5，pak 在 `..\.tmp\polaris\g1`）。
 
-## 文档
+'## 写 mod 的完整流程
+
+从生成 SDK 到进游戏验证：[docs/mod-authoring.md](docs/mod-authoring.md)。
+
+## 文档'
 
 - [docs/INDEX.md](docs/INDEX.md)：模块 / 函数看板 / 未实现清单
 - [docs/PLAN.md](docs/PLAN.md)：里程碑与闸门
