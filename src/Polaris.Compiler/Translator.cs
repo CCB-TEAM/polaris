@@ -555,6 +555,20 @@ public static class Translator
 
         var symbol = context.Model.GetDeclaredSymbol(variable) as ILocalSymbol
             ?? throw new CompileException("无法解析局部变量", variable);
+
+        if (symbol.Type is INamedTypeSymbol { Name: "TArray", TypeArguments.Length: 1 } arrayType)
+        {
+            var (innerType, innerSize) = PropertyTypeOf(arrayType.TypeArguments[0], variable);
+            LocalVariables.Ensure(
+                context.TargetFunction, context.Asset, symbol.Name, "ArrayProperty", 16, innerType, innerSize);
+            if (variable.Initializer is not null)
+            {
+                throw new CompileException("暂不支持数组局部变量初始化", variable);
+            }
+
+            return;
+        }
+
         var (propertyType, elementSize) = PropertyTypeOf(symbol.Type, variable);
 
         LocalVariables.Ensure(context.TargetFunction, context.Asset, symbol.Name, propertyType, elementSize);

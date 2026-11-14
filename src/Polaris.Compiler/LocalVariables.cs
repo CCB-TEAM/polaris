@@ -11,7 +11,7 @@ namespace Polaris.Compiler;
 /// </summary>
 public static class LocalVariables
 {
-    public static FProperty Ensure(FunctionExport function, UAsset asset, string name, string propertyType, int elementSize)
+    public static FProperty Ensure(FunctionExport function, UAsset asset, string name, string propertyType, int elementSize, string? innerPropertyType = null, int innerElementSize = 4)
     {
         foreach (var property in function.LoadedProperties)
         {
@@ -25,7 +25,12 @@ public static class LocalVariables
             .SelectMany(f => f.LoadedProperties)
             .FirstOrDefault(p => p.SerializedType?.Value?.Value == propertyType);
 
-        FProperty created = propertyType == "BoolProperty" ? new FBoolProperty() : new FGenericProperty();
+        FProperty created = propertyType switch
+        {
+            "ArrayProperty" => new FArrayProperty { Inner = CreateLeaf(asset, innerPropertyType ?? "IntProperty", innerElementSize) },
+            "BoolProperty" => new FBoolProperty(),
+            _ => new FGenericProperty(),
+        };
         created.SerializedType = new FName(asset, propertyType);
         created.Name = new FName(asset, name);
         created.Flags = template?.Flags ?? EObjectFlags.RF_NoFlags;
@@ -49,5 +54,29 @@ public static class LocalVariables
 
         function.LoadedProperties = function.LoadedProperties.Append(created).ToArray();
         return created;
+    }
+
+    private static FProperty CreateLeaf(UAsset asset, string propertyType, int elementSize)
+    {
+        FProperty property = propertyType == "BoolProperty" ? new FBoolProperty() : new FGenericProperty();
+        property.SerializedType = new FName(asset, propertyType);
+        property.Name = new FName(asset, "None");
+        property.Flags = EObjectFlags.RF_NoFlags;
+        property.ArrayDim = EArrayDim.NotAnArray;
+        property.ElementSize = elementSize;
+        property.PropertyFlags = EPropertyFlags.CPF_ZeroConstructor | EPropertyFlags.CPF_IsPlainOldData | EPropertyFlags.CPF_NoDestructor;
+        property.RepIndex = 0;
+        property.RepNotifyFunc = new FName(asset, "None");
+        property.BlueprintReplicationCondition = ELifetimeCondition.COND_None;
+
+        if (property is FBoolProperty boolean)
+        {
+            boolean.FieldSize = 1;
+            boolean.ByteMask = 255;
+            boolean.FieldMask = 255;
+            boolean.NativeBool = true;
+        }
+
+        return property;
     }
 }

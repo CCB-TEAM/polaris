@@ -125,7 +125,22 @@ targetCard.cardFunction.DrawSpecificCardFromDeckBySide(0, targetCard.CardID, ESi
 
 `DrawCardsFromDeckBySide` 这类带 `out TArray<int>` 的抽牌函数还需要数组局部变量支持（见 PLAN）。
 
-## 11. 已知风险'''''
+'## 11. G1h：数组局部变量 + 真正抽牌（待测）
+
+数组局部变量按 UAssetAPI 的 `FArrayProperty`（内含 `Inner`）写入函数 `LoadedProperties`：
+
+```csharp
+TArray<int> ids;
+targetCard.cardFunction.DrawCardsFromDeckBySide(0, ESideEnum.left, 2, true, false, out ids, 0.0f);
+```
+
+产物：`D:\files\projects\.tmp\polaris\g1h\card_unit_t_70eot_g1h.pak`（7872 字节），源码 [samples/G1hMod.cs](../../samples/G1hMod.cs)。
+
+反编译：`cardFunction.DrawCardsFromDeckBySide(0, 1, 2, true, false, ids, 0f)`；`check` roundtrip 3/3。
+
+**预期**：打出该卡时从牌库抽 **2 张**。
+
+## 12. 已知风险''''''
 
 - 该资产的跳转/入口偏移与解析布局不一致（见 `docs/PLAN.md §9`），但我们替换的是**平坦函数** `OnPlayedFromHand`，不触碰 ubergraph 段重排；写回后已通过 `RoundTrip.Verify`。
 - 若游戏启动即崩，优先怀疑 pak 格式/挂载路径；可用 `polaris pak` 重新核对条目路径。

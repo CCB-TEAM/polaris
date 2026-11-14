@@ -29,7 +29,7 @@ Polaris 是「**自研编译器 + UHT 风格 SDK**」的组合：
 | 变量读写（赋值 / 变量作实参 / `out`、`ref` 实参） | ✅ |
 | `return` 带返回值（`return 5;` → `EX_Return(IntConst)`） | ✅ |
 | 枚举成员常量（`ESideEnum.left` → `EX_ByteConst`） | ✅ |
-| 局部变量声明（`int x = 1;` → 补 FProperty + `EX_Let`，写回可重开） | ✅ |
+| 局部变量声明（int/bool/float/double/long/string，含 `TArray<int>` → `FArrayProperty`） | ✅ |
 | 算术/比较/位运算/字符串/逻辑/一元表达式（含 `%`、`& \| ^ << >>`、`&& \|\|`、字符串拼接与比较） | ✅ |
 | 条件分支（`if (x > 1)` → 比较 + `EX_JumpIfNot`） | ✅ |
 | `while` / `for` 循环（条件 + 回跳 + `break`/`continue`） | ✅ |
