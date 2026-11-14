@@ -28,7 +28,7 @@ Polaris 是「**自研编译器 + UHT 风格 SDK**」的组合：
 | **数据注解**：`[PolarisAsset]`/`[PolarisReplace]`/`[PolarisPatch]` 放进 mod 源码 | ✅ |
 | 变量读写（赋值 / 变量作实参 / `out`、`ref` 实参） | ✅ |
 | 局部变量声明（`int x = 1;` → 补 FProperty + `EX_Let`，写回可重开） | ✅ |
-| 算术/比较表达式（`+ - * /`、`> < >= <= == !=` → `EX_CallMath`） | ✅ |
+| 算术/比较/位运算/一元表达式（`+ - * / %`、`> < >= <= == !=`、`& \| ^ << >>`、`-x`、`!b`） | ✅ |
 | 条件分支（`if (x > 1)` → 比较 + `EX_JumpIfNot`） | ✅ |
 | `out`/`ref`/`const` 参数（从纯 jmap 的 CPF flags 推出） | ✅ |
 | 反编译 → 回编译字节一致（全量 Cards 语料 **6492/6492 函数**） | ✅ |

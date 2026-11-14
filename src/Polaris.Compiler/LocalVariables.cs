@@ -25,19 +25,27 @@ public static class LocalVariables
             .SelectMany(f => f.LoadedProperties)
             .FirstOrDefault(p => p.SerializedType?.Value?.Value == propertyType);
 
-        var created = new FGenericProperty
+        FProperty created = propertyType == "BoolProperty" ? new FBoolProperty() : new FGenericProperty();
+        created.SerializedType = new FName(asset, propertyType);
+        created.Name = new FName(asset, name);
+        created.Flags = template?.Flags ?? EObjectFlags.RF_NoFlags;
+        created.ArrayDim = template?.ArrayDim ?? EArrayDim.NotAnArray;
+        created.ElementSize = template?.ElementSize ?? elementSize;
+        created.PropertyFlags = template?.PropertyFlags
+            ?? (EPropertyFlags.CPF_ZeroConstructor | EPropertyFlags.CPF_IsPlainOldData | EPropertyFlags.CPF_NoDestructor);
+        created.RepIndex = 0;
+        created.RepNotifyFunc = new FName(asset, "None");
+        created.BlueprintReplicationCondition = ELifetimeCondition.COND_None;
+
+        if (created is FBoolProperty boolean)
         {
-            SerializedType = new FName(asset, propertyType),
-            Name = new FName(asset, name),
-            Flags = template?.Flags ?? EObjectFlags.RF_NoFlags,
-            ArrayDim = template?.ArrayDim ?? EArrayDim.NotAnArray,
-            ElementSize = template?.ElementSize ?? elementSize,
-            PropertyFlags = template?.PropertyFlags
-                ?? (EPropertyFlags.CPF_ZeroConstructor | EPropertyFlags.CPF_IsPlainOldData | EPropertyFlags.CPF_NoDestructor),
-            RepIndex = 0,
-            RepNotifyFunc = new FName(asset, "None"),
-            BlueprintReplicationCondition = ELifetimeCondition.COND_None,
-        };
+            boolean.FieldSize = 1;
+            boolean.ByteOffset = 0;
+            boolean.ByteMask = 255;
+            boolean.FieldMask = 255;
+            boolean.NativeBool = true;
+            boolean.Value = false;
+        }
 
         function.LoadedProperties = function.LoadedProperties.Append(created).ToArray();
         return created;

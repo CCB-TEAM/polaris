@@ -886,7 +886,12 @@ internal static class TestRunner
                     {
                         int x = 1;
                         x = x + 2;
-                        if (x > 1) { x = x + 1; } else { x = x + 2; }
+                        bool b = x > 1;
+                        b = !b;
+                        x = x % 2;
+                        x = x & 3;
+                        x = -x;
+                        if (b) { x = x + 1; } else { x = x + 2; }
                         KMLX.Abs_Int(x);
                         return;
                     }
@@ -921,10 +926,10 @@ internal static class TestRunner
                 new FPackageIndex(1),
                 function);
 
-            True(function.LoadedProperties.Length == before + 1, "函数多了一个局部变量属性");
+            True(function.LoadedProperties.Length == before + 2, "函数多了两个局部变量属性");
             True(expressions.OfType<EX_Let>().Any(), "含局部变量赋值");
             True(expressions.OfType<EX_Let>().Any(l => l.Expression is EX_CallMath), "含数学调用（x + 2）");
-            True(expressions.OfType<EX_JumpIfNot>().Any(j => j.BooleanExpression is EX_CallMath), "条件比较（x > 1）");
+            True(expressions.OfType<EX_JumpIfNot>().Any(j => j.BooleanExpression is EX_CallMath or EX_LocalVariable), "条件（比较或变量）");
             True(BytecodeCheck.Run(expressions, card.Asset).Ok, "字节码自校验");
 
             FunctionWriter.Replace(card.Asset, "OnPlayedFromHand", expressions);
@@ -932,7 +937,7 @@ internal static class TestRunner
             var reopened = CardAsset.Open(saved.UAssetPath, env.Usmap, Work(root, "loc-reopen"));
             var target = reopened.Asset.Exports.OfType<UAssetAPI.ExportTypes.FunctionExport>()
                 .First(f => f.ObjectName.ToString() == "OnPlayedFromHand");
-            Equal(before + 1, target.LoadedProperties.Length);
+            Equal(before + 2, target.LoadedProperties.Length);
             var report = RoundTrip.Verify(target.ScriptBytecode!, reopened.Asset);
             True(report.Ok, "重开往返: " + report.Error);
         });

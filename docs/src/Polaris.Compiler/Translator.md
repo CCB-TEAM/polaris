@@ -74,11 +74,19 @@ return;
 - **边界与失败**：条件必须是 bool（由 Roslyn 语义模型保证）；不支持的表达式抛 `CompileException`。
 - **调用者与被调用者**：`EmitIf` 调用；依赖 `EmitExpression`。
 
-### `EmitBinary(binary: BinaryExpressionSyntax, context: Context): KismetExpression`
+'### `EmitUnary(unary: PrefixUnaryExpressionSyntax, context: Context): KismetExpression`
+
+**状态：✅ 已实现**（测试覆盖 `x = -x` 与 `b = !b`）
+
+- **签名与契约**：`-x` → `EX_CallMath(Subtract_IntInt/FloatFloat/DoubleDouble, 0, x)`；`!b` → `EX_CallMath(Not_PreBool, b)`。
+- **边界与失败**：取负仅数值类型；其它一元运算抛 `CompileException`。
+- **调用者与被调用者**：`EmitExpression` 调用。
+
+### `EmitBinary(binary: BinaryExpressionSyntax, context: Context): KismetExpression`'
 
 **状态：✅ 已实现**（测试「局部变量声明：写回 + 重开往返」覆盖 `x = x + 2` 与 `if (x > 1)`）
 
-- **签名与契约**：`+ - * /` → `Add/Subtract/Multiply/Divide`；比较 `> < >= <= == !=` → `Greater/Less/GreaterEqual/LessEqual/EqualEqual/NotEqual`；统一走 `EX_CallMath` 调 `KismetMathLibrary`（int `_IntInt`、float `_FloatFloat`、double `_DoubleDouble`、bool 相等 `_BoolBool`）。
+- **签名与契约**：`+ - * / %` → `Add/Subtract/Multiply/Divide/Percent`；比较 `> < >= <= == !=` → `Greater/Less/GreaterEqual/LessEqual/EqualEqual/NotEqual`；位运算 `& | ^ << >>` → `BitwiseAnd/BitwiseOr/BitwiseXor/LeftShift/RightShift`（仅 int）；统一走 `EX_CallMath` 调 `KismetMathLibrary`（int `_IntInt`、float `_FloatFloat`、double `_DoubleDouble`、bool 相等 `_BoolBool`）。
 - **输入输出**：运算数递归 `EmitExpression`；类型取 Roslyn 语义模型。
 - **关键分支（伪代码）**：
   ```
@@ -86,5 +94,5 @@ return;
   suffix = 类型 → IntInt/FloatFloat/DoubleDouble/BoolBool
   return EX_CallMath { KismetMathLibrary, op+"_"+suffix, [left,right] }
   ```
-- **边界与失败**：不支持取模/位运算/字符串拼接；类型不匹配抛 `CompileException`。
+- **边界与失败**：不支持字符串拼接；位运算仅 int；类型不匹配抛 `CompileException`。
 - **调用者与被调用者**：`EmitExpression`、`EmitCondition` 调用；依赖 `IFunctionResolver`。

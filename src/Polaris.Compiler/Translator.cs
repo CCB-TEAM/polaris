@@ -183,15 +183,28 @@ public static class Translator
             SyntaxKind.LessThanOrEqualExpression => "LessEqual",
             SyntaxKind.EqualsExpression => "EqualEqual",
             SyntaxKind.NotEqualsExpression => "NotEqual",
+            SyntaxKind.ModuloExpression => "Percent",
+            SyntaxKind.BitwiseAndExpression => "BitwiseAnd",
+            SyntaxKind.BitwiseOrExpression => "BitwiseOr",
+            SyntaxKind.ExclusiveOrExpression => "BitwiseXor",
+            SyntaxKind.LeftShiftExpression => "LeftShift",
+            SyntaxKind.RightShiftExpression => "RightShift",
             _ => throw new CompileException($"暂不支持的运算符 {binary.OperatorToken.Text}", binary),
         };
 
         var operandType = context.Model.GetTypeInfo(binary.Left).Type;
+        var intOnly = binary.Kind() is SyntaxKind.ModuloExpression
+            or SyntaxKind.BitwiseAndExpression
+            or SyntaxKind.BitwiseOrExpression
+            or SyntaxKind.ExclusiveOrExpression
+            or SyntaxKind.LeftShiftExpression
+            or SyntaxKind.RightShiftExpression;
+
         var suffix = operandType?.SpecialType switch
         {
             SpecialType.System_Int32 => "IntInt",
-            SpecialType.System_Single => "FloatFloat",
-            SpecialType.System_Double => "DoubleDouble",
+            SpecialType.System_Single when !intOnly => "FloatFloat",
+            SpecialType.System_Double when !intOnly => "DoubleDouble",
             SpecialType.System_Boolean when binary.Kind() is SyntaxKind.EqualsExpression or SyntaxKind.NotEqualsExpression => "BoolBool",
             _ => throw new CompileException($"暂不支持的运算数类型 {operandType}", binary),
         };
@@ -379,7 +392,50 @@ public static class Translator
             return EmitBinary(binary, context);
         }
 
+        if (expression is PrefixUnaryExpressionSyntax unary)
+        {
+            return EmitUnary(unary, context);
+        }
+
         return EmitReceiver(expression, context);
+    }
+
+    private static KismetExpression EmitUnary(PrefixUnaryExpressionSyntax unary, Context context)
+    {
+        if (unary.IsKind(SyntaxKind.LogicalNotExpression))
+        {
+            return new EX_CallMath
+            {
+                StackNode = context.Resolver.Resolve("/Script/Engine.KismetMathLibrary", "Not_PreBool"),
+                Parameters = [EmitExpression(unary.Operand, context)],
+            };
+        }
+
+        if (unary.IsKind(SyntaxKind.UnaryMinusExpression))
+        {
+            var operandType = context.Model.GetTypeInfo(unary.Operand).Type;
+            KismetExpression zero = operandType?.SpecialType switch
+            {
+                SpecialType.System_Int32 => new EX_IntConst { Value = 0 },
+                SpecialType.System_Single => new EX_FloatConst { Value = 0 },
+                SpecialType.System_Double => new EX_DoubleConst { Value = 0 },
+                _ => throw new CompileException($"暂不支持的一元取负类型 {operandType}", unary),
+            };
+            var suffix = operandType!.SpecialType switch
+            {
+                SpecialType.System_Int32 => "IntInt",
+                SpecialType.System_Single => "FloatFloat",
+                _ => "DoubleDouble",
+            };
+
+            return new EX_CallMath
+            {
+                StackNode = context.Resolver.Resolve("/Script/Engine.KismetMathLibrary", "Subtract_" + suffix),
+                Parameters = [zero, EmitExpression(unary.Operand, context)],
+            };
+        }
+
+        throw new CompileException($"暂不支持的一元运算符 {unary.OperatorToken.Text}", unary);
     }
 
     private static string? GetUClassPath(INamedTypeSymbol type)
