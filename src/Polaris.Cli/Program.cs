@@ -23,7 +23,9 @@ internal static class Cli
           apply        --mod <Mod.cs> --content <ContentRoot> --usmap <usmap> --out <dir>
                        [--sdk <GeneratedSdk.dll>] [--pak <mod.pak>]
           check        --asset <uasset> | --dir <目录> [--limit N] --usmap <usmap> [--json <file>]
-          decompile    --asset <uasset> | --dir <目录> --usmap <usmap> [--function <name>] [--strict] [--out <file|dir>]\n          diff         --before <uasset> --after <uasset> --usmap <usmap>   比较 CDO 与函数字节
+          decompile    --asset <uasset> | --dir <目录> --usmap <usmap> [--function <name>] [--strict] [--out <file|dir>]
+          diff         --before <uasset> --after <uasset> --usmap <usmap>   比较 CDO 与函数字节
+          ubergraph    --asset <uasset> --usmap <usmap>                    诊断入口/段偏移
 
         global options:
           --work <dir>         工作目录（usmap 副本与字节码校验用），默认 .polaris-work
@@ -64,6 +66,11 @@ internal static class Cli
             if (args[0] == "diff")
             {
                 return Diff(Parse(args.Skip(1).ToArray()));
+            }
+
+            if (args[0] == "ubergraph")
+            {
+                return Ubergraph(Parse(args.Skip(1).ToArray()));
             }
 
             if (args[0] == "pak")
@@ -442,6 +449,98 @@ internal static class Cli
 
         Console.WriteLine($"ok       {replacedTotal} 个函数写回，{patchedTotal} 个 CDO 字段");
         return 0;
+    }
+
+    private static int Ubergraph(Options opts)
+    {
+        var card = CardAsset.Open(opts.Require("asset"), opts.Require("usmap"), opts.Work);
+        var ubergraph = card.Asset.Exports.OfType<UAssetAPI.ExportTypes.FunctionExport>()
+            .FirstOrDefault(f => f.ObjectName.ToString().StartsWith("ExecuteUbergraph"));
+        if (ubergraph?.ScriptBytecode is not { Length: > 0 })
+        {
+            Console.Error.WriteLine("资产里没有 ExecuteUbergraph_* 函数");
+            return 1;
+        }
+
+        var block = SerializeExpressions(ubergraph.ScriptBytecode, card.Asset);
+        var starts = ParseStarts(block, card.Asset);
+        Console.WriteLine($"ubergraph {ubergraph.ObjectName}: expr={ubergraph.ScriptBytecode.Length} bytes={block.Length} starts={starts.Count}");
+
+        var computed = ubergraph.ScriptBytecode
+            .OfType<UAssetAPI.Kismet.Bytecode.Expressions.EX_ComputedJump>()
+            .FirstOrDefault();
+        Console.WriteLine($"  computedJump operand={computed?.CodeOffsetExpression?.Token}");
+
+        string NameOf(UAssetAPI.UnrealTypes.FPackageIndex index)
+        {
+            if (index.Index > 0 && index.Index <= card.Asset.Exports.Count)
+            {
+                return card.Asset.Exports[index.Index - 1].ObjectName.ToString();
+            }
+
+            if (index.Index < 0 && -index.Index <= card.Asset.Imports.Count)
+            {
+                return card.Asset.Imports[-index.Index - 1].ObjectName.ToString();
+            }
+
+            return "idx:" + index.Index;
+        }
+
+        var stubs = 0;
+        foreach (var function in card.Asset.Exports.OfType<UAssetAPI.ExportTypes.FunctionExport>())
+        {
+            if (ReferenceEquals(function, ubergraph) || function.ScriptBytecode is not { Length: > 0 })
+            {
+                continue;
+            }
+
+            foreach (var call in function.ScriptBytecode.OfType<UAssetAPI.Kismet.Bytecode.Expressions.EX_LocalFinalFunction>())
+            {
+                if (NameOf(call.StackNode) != ubergraph.ObjectName.ToString())
+                {
+                    continue;
+                }
+
+                foreach (var entry in call.Parameters.OfType<UAssetAPI.Kismet.Bytecode.Expressions.EX_IntConst>())
+                {
+                    stubs++;
+                    var landed = starts.Contains((uint)entry.Value);
+                    var next = starts.FirstOrDefault(s => s >= entry.Value, (uint)block.Length);
+                    Console.WriteLine($"  {function.ObjectName}: entry={entry.Value} landed={landed} next={next} delta={next - entry.Value}");
+                }
+            }
+        }
+
+        Console.WriteLine($"stubs      {stubs}");
+        return 0;
+    }
+
+    private static byte[] SerializeExpressions(
+        IReadOnlyList<UAssetAPI.Kismet.Bytecode.KismetExpression> expressions,
+        UAssetAPI.UAsset asset)
+    {
+        var stream = new MemoryStream();
+        var writer = new UAssetAPI.AssetBinaryWriter(stream, asset);
+        foreach (var expression in expressions)
+        {
+            UAssetAPI.Kismet.Bytecode.ExpressionSerializer.WriteExpression(expression, writer);
+        }
+
+        writer.Flush();
+        return stream.ToArray();
+    }
+
+    private static List<uint> ParseStarts(byte[] block, UAssetAPI.UAsset asset)
+    {
+        var starts = new List<uint>();
+        var reader = new UAssetAPI.AssetBinaryReader(new MemoryStream(block), asset);
+        while (reader.BaseStream.Position < block.Length)
+        {
+            starts.Add((uint)reader.BaseStream.Position);
+            UAssetAPI.Kismet.Bytecode.ExpressionSerializer.ReadExpression(reader);
+        }
+
+        return starts;
     }
 
     private static int Diff(Options opts)

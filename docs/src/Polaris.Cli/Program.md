@@ -146,3 +146,19 @@
   ```
 - **边界与失败**：两个资产必须都是卡资产（无 CDO 会抛）；只看内容，不看 pak。
 - **调用者与被调用者**：`polaris diff`；调用 `CardAsset`、`FunctionBytes`、`AssetDiff`。
+
+### `Ubergraph(opts: Options): int`
+
+**状态：✅ 已实现**（`card_event_aans`：ubergraph 9 条 / 367 字节，1 个 stub，`entry=10` 不落在指令起点；`BP_CardFunctions`：59 条 / 2035 字节，10 个 stub）
+
+- **签名与契约**：`polaris ubergraph --asset <uasset> --usmap <usmap>`；打印 ubergraph 规模、`EX_ComputedJump` 操作数类型，以及每个事件存根的入口值与落点。
+- **输入输出**：只读；每个 stub 输出 `entry`、是否落在解析出的指令起点、最近起点与差值。
+- **关键分支（伪代码）**：
+  ```
+  找 ExecuteUbergraph_*
+  序列化 + 顺序回读 → starts
+  找 stub 里调用 ubergraph 的 EX_LocalFinalFunction → 取 EX_IntConst 参数
+  打印 entry/landed/next/delta
+  ```
+- **边界与失败**：没有 ubergraph 返回 1；入口表语义仍未解（见 PLAN §9）。
+- **调用者与被调用者**：`polaris ubergraph`；调用 `CardAsset`、`ExpressionSerializer`。
