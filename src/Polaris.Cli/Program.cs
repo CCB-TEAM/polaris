@@ -78,6 +78,11 @@ internal static class Cli
                 return Ubergraph(Parse(args.Skip(1).ToArray()));
             }
 
+            if (args[0] == "objects")
+            {
+                return Objects(Parse(args.Skip(1).ToArray()));
+            }
+
             if (args[0] == "offsets")
             {
                 return Offsets(Parse(args.Skip(1).ToArray()));
@@ -579,6 +584,79 @@ internal static class Cli
             default:
                 return 0;
         }
+    }
+
+    private static int Objects(Options opts)
+    {
+        var card = CardAsset.Open(opts.Require("asset"), opts.Require("usmap"), opts.Work);
+        var name = opts.Require("function");
+        var function = card.Asset.Exports.OfType<UAssetAPI.ExportTypes.FunctionExport>()
+            .FirstOrDefault(f => f.ObjectName.ToString() == name);
+        if (function?.ScriptBytecode is null)
+        {
+            Console.Error.WriteLine("找不到函数: " + name);
+            return 1;
+        }
+
+        string Resolve(UAssetAPI.UnrealTypes.FPackageIndex index)
+        {
+            if (index.Index > 0 && index.Index <= card.Asset.Exports.Count)
+            {
+                return "export:" + card.Asset.Exports[index.Index - 1].ObjectName;
+            }
+
+            if (index.Index < 0 && -index.Index <= card.Asset.Imports.Count)
+            {
+                return "import:" + card.Asset.Imports[-index.Index - 1].ObjectName;
+            }
+
+            return "idx:" + index.Index;
+        }
+
+        void Walk(UAssetAPI.Kismet.Bytecode.KismetExpression expression, int depth)
+        {
+            var pad = new string((char)32, depth * 2);
+            switch (expression)
+            {
+                case UAssetAPI.Kismet.Bytecode.Expressions.EX_ObjectConst obj:
+                    Console.WriteLine($"{pad}ObjectConst {obj.Value.Index} {Resolve(obj.Value)}");
+                    break;
+                case UAssetAPI.Kismet.Bytecode.Expressions.EX_Context context:
+                    Console.WriteLine($"{pad}Context object={context.ObjectExpression.GetType().Name}");
+                    if (context.ObjectExpression is UAssetAPI.Kismet.Bytecode.Expressions.EX_ObjectConst inner)
+                    {
+                        Console.WriteLine($"{pad}  objectConst {inner.Value.Index} {Resolve(inner.Value)}");
+                    }
+
+                    break;
+            }
+
+            foreach (var field in expression.GetType().GetFields(
+                         System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance))
+            {
+                var value = field.GetValue(expression);
+                switch (value)
+                {
+                    case UAssetAPI.Kismet.Bytecode.KismetExpression child:
+                        Walk(child, depth + 1);
+                        break;
+                    case UAssetAPI.Kismet.Bytecode.KismetExpression[] children:
+                        foreach (var child in children)
+                        {
+                            if (child is not null) Walk(child, depth + 1);
+                        }
+
+                        break;
+                }
+            }
+        }
+
+        foreach (var statement in function.ScriptBytecode)
+        {
+            Walk(statement, 0);
+        }
+
+        return 0;
     }
 
     private static int Functions(Options opts)

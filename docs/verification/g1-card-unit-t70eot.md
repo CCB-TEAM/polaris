@@ -92,7 +92,25 @@ else          { targetCard.CampaignAddAttack(1, false); }
 
 Flora 侧也应能正常反编译（跳转已改为 Visit 坐标系：`JumpIfNot → 98`、`Jump → 136`，均 `landedFlora=True`）。
 
-## 9. 已知风险'''
+'## 9. G1f：指向性卡牌（CDO 要求，待测）
+
+对比 `card_event_spirit_of_rome`（指向性事件）的 CDO：`selectTargetOnPlayedFromHand = true`；我们的测试卡没有这个字段值。
+
+产物：`D:\files\projects\.tmp\polaris\g1f\card_unit_t_70eot_g1f.pak`（8172 字节），源码 [samples/G1fMod.cs](../../samples/G1fMod.cs)。
+
+```csharp
+[PolarisPatch("selectTargetOnPlayedFromHand", "true")]   // CDO：变成指向性
+...
+bool canIt; string reason, reasonParam1, reasonParam2;
+targetCard.CanBeTargetted(out canIt, out reason, out reasonParam1, out reasonParam2, targetCard, true);
+if (canIt) { targetCard.CampaignAddAttack(2, false); }
+```
+
+**预期**：打出该卡时游戏要求选一个目标；对目标攻击 +2。
+
+Flora：`JumpIfNot → 130`（`landedFlora=True`），CDO 多出 `selectTargetOnPlayedFromHand = true`。
+
+## 10. 已知风险''''
 
 - 该资产的跳转/入口偏移与解析布局不一致（见 `docs/PLAN.md §9`），但我们替换的是**平坦函数** `OnPlayedFromHand`，不触碰 ubergraph 段重排；写回后已通过 `RoundTrip.Verify`。
 - 若游戏启动即崩，优先怀疑 pak 格式/挂载路径；可用 `polaris pak` 重新核对条目路径。
