@@ -43,9 +43,16 @@ public static class KismetDecompiler
         out bool decodedControlFlow)
     {
         var decoded = false;
-        var nodes = DecompileRange(expressions, 0, expressions.Count, asset, Starts(expressions, asset), ref decoded);
+        var nodes = DecompileRange(expressions, 0, expressions.Count, asset, Starts(expressions, asset), ref decoded, allowDecode: true);
         decodedControlFlow = decoded;
         return nodes;
+    }
+
+    /// <summary>跳转一律原样保留（用于往返校验，保证字节不变）。</summary>
+    public static IReadOnlyList<KNode> DecompileRaw(IReadOnlyList<KismetExpression> expressions, UAsset asset)
+    {
+        var decoded = false;
+        return DecompileRange(expressions, 0, expressions.Count, asset, Starts(expressions, asset), ref decoded, allowDecode: false);
     }
 
     private static IReadOnlyList<KNode> DecompileRange(
@@ -54,15 +61,16 @@ public static class KismetDecompiler
         int end,
         UAsset asset,
         IReadOnlyList<uint> starts,
-        ref bool decoded)
+        ref bool decoded,
+        bool allowDecode)
     {
         var nodes = new List<KNode>();
         var i = start;
         while (i < end)
         {
-            if (expressions[i] is EX_JumpIfNot conditional)
+            if (allowDecode && expressions[i] is EX_JumpIfNot conditional)
             {
-                if (TryDecodeIf(expressions, i, end, asset, starts, ref decoded, out var node, out var next))
+                if (TryDecodeIf(expressions, i, end, asset, starts, ref decoded, out var node, out var next) && allowDecode)
                 {
                     nodes.Add(node!);
                     i = next;
@@ -140,8 +148,8 @@ public static class KismetDecompiler
                 return false;
             }
 
-            var thenNodes = DecompileRange(expressions, index + 1, jump, asset, starts, ref decoded);
-            var elseNodes = DecompileRange(expressions, jump + 1, finish, asset, starts, ref decoded);
+            var thenNodes = DecompileRange(expressions, index + 1, jump, asset, starts, ref decoded, allowDecode: true);
+            var elseNodes = DecompileRange(expressions, jump + 1, finish, asset, starts, ref decoded, allowDecode: true);
             node = new KIf(DecompileExpression(conditional.BooleanExpression), new KSeq(thenNodes), new KSeq(elseNodes));
             next = finish;
             decoded = true;
@@ -153,7 +161,7 @@ public static class KismetDecompiler
             return false;
         }
 
-        var thenOnly = DecompileRange(expressions, index + 1, target, asset, starts, ref decoded);
+        var thenOnly = DecompileRange(expressions, index + 1, target, asset, starts, ref decoded, allowDecode: true);
         node = new KIf(DecompileExpression(conditional.BooleanExpression), new KSeq(thenOnly), null);
         next = target;
         decoded = true;
@@ -373,7 +381,7 @@ public static class RoundTrip
     {
         try
         {
-            var nodes = KismetDecompiler.Decompile(expressions, asset);
+            var nodes = KismetDecompiler.DecompileRaw(expressions, asset);
             var rebuilt = KismetRecompiler.Recompile(nodes, asset);
             var before = Serialize(expressions, asset);
             var after = Serialize(rebuilt, asset);

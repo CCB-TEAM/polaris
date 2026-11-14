@@ -22,7 +22,7 @@ internal static class Cli
              （或旧输入：--usmap <usmap> --catalog <functions.json>）
           apply        --mod <Mod.cs> --content <ContentRoot> --usmap <usmap> --out <dir>
                        [--sdk <GeneratedSdk.dll>] [--pak <mod.pak>]
-          check        --asset <uasset> --usmap <usmap>     反编译/回编译往返覆盖率
+          check        --asset <uasset> | --dir <目录> [--limit N] --usmap <usmap>   往返覆盖率
           decompile    --asset <uasset> | --dir <目录> --usmap <usmap> [--function <name>] [--strict] [--out <file|dir>]
 
         global options:
@@ -392,9 +392,9 @@ internal static class Cli
                 continue;
             }
 
-            var nodes = KismetDecompiler.Decompile(function.ScriptBytecode, card.Asset);
+            var nodes = KismetDecompiler.Decompile(function.ScriptBytecode, card.Asset, out var decodedControlFlow);
             var roundtrip = RoundTrip.Verify(function.ScriptBytecode, card.Asset);
-            text.AppendLine($"// {function.ObjectName}  roundtrip={(roundtrip.Ok ? "ok" : "FAIL: " + roundtrip.Error)}");
+            text.AppendLine($"// {function.ObjectName}  roundtrip={(roundtrip.Ok ? "ok" : "FAIL: " + roundtrip.Error)}  controlflow={(decodedControlFlow ? "decoded" : "raw")}");
             if (!roundtrip.Ok)
             {
                 failed++;
@@ -418,7 +418,13 @@ internal static class Cli
         }
         else if (opts.Values.TryGetValue("dir", out var dir))
         {
-            files.AddRange(Directory.EnumerateFiles(dir, "*.uasset", SearchOption.AllDirectories));
+            var filesInDir = Directory.EnumerateFiles(dir, "*.uasset", SearchOption.AllDirectories);
+            if (opts.Values.TryGetValue("limit", out var limitText) && int.TryParse(limitText, out var limit))
+            {
+                filesInDir = filesInDir.Take(limit);
+            }
+
+            files.AddRange(filesInDir);
         }
         else
         {

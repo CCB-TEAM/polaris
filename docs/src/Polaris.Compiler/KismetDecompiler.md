@@ -1,6 +1,6 @@
 # `Polaris.Compiler/KismetDecompiler`
 
-**职责**：字节码 ↔ 自有节点树。反编译（`KismetExpression[]` → `KNode`）与回编译（`KNode` → `KismetExpression[]`），
+**职责**：字节码 ↔ 自有节点树。反编译（`KismetExpression[]` → `KNode`，另有 `DecompileRaw` 保留跳转原样）与回编译（`KNode` → `KismetExpression[]`），
 用「反编译 → 回编译 → 字节比对」确认实现对既有函数无损。
 **对外入口**：`KismetDecompiler.Decompile` / `KismetRecompiler.Recompile` / `RoundTrip.Verify`。
 **内部结构**：节点类型 `KConst`/`KVar`/`KCall`/`KLet`/`KPersist`/`KReturn`/`KEnd`/`KSeq`/`KIf`；回编译用 `BytecodeBuilder` 重新发指令并回填跳转。
@@ -48,7 +48,7 @@
 
 **状态：✅ 已实现**（真实函数 `OnPlayedFromHand` 与编译产物均通过）
 
-- **签名与契约**：序列化原指令 → 反编译 → 回编译 → 序列化 → `SequenceEqual`；异常捕获为报告，不抛出；失败时报告首个差异偏移与所在指令。
+- **签名与契约**：序列化原指令 → `DecompileRaw`（跳转原样保留）→ 回编译 → 序列化 → `SequenceEqual`；异常捕获为报告，不抛出；失败时报告首个差异偏移与所在指令。
 - **输入输出**：`Ok=true` 表示字节完全一致；失败时 `Error` 给出偏移/长度/所在 token 或异常消息。
 - **关键分支（伪代码）**：
   ```
