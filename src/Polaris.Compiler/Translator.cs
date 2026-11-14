@@ -273,6 +273,8 @@ public static class Translator
                 int i => new EX_IntConst { Value = i },
                 bool b => b ? new EX_True() : new EX_False(),
                 string s => new EX_StringConst { Value = s },
+                float f => new EX_FloatConst { Value = f },
+                double d => new EX_DoubleConst { Value = d },
                 _ => throw new CompileException($"不支持的字面量类型 {constant.Value?.GetType()}", expression),
             };
         }

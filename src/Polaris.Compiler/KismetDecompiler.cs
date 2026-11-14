@@ -107,6 +107,10 @@ public static class KismetDecompiler
                 return new KConst(new EX_False());
             case EX_StringConst s:
                 return new KConst(new EX_StringConst { Value = s.Value });
+            case EX_FloatConst f:
+                return new KConst(new EX_FloatConst { Value = f.Value });
+            case EX_DoubleConst d:
+                return new KConst(new EX_DoubleConst { Value = d.Value });
             case EX_Nothing:
                 return new KConst(new EX_Nothing());
             case EX_LocalVariable v:

@@ -94,6 +94,7 @@ internal static class TestRunner
         RoundTripCoverage(env, root);
         NoOpSaveFidelity(env, root);
         OutRefArgument(env, root);
+        FloatConstants(env, root);
         Errors(env, root);
 
         Console.WriteLine();
@@ -787,6 +788,61 @@ internal static class TestRunner
             var calls = expressions.OfType<EX_FinalFunction>().ToList();
             True(calls.Count == 2, "两次调用");
             True(calls.All(c => c.Parameters[0] is EX_LocalVariable), "out/ref 实参都是变量令牌");
+            var report = RoundTrip.Verify(expressions, host);
+            True(report.Ok, "往返: " + report.Error);
+        });
+    }
+
+    private static void FloatConstants(TestContext env, string root)
+    {
+        Case("常量：float / double 字面量", () =>
+        {
+            const string source = """
+                using Polaris.Sdk;
+
+                [UClass("/Script/Engine.KismetMathLibrary")]
+                public class KMLF : UObject
+                {
+                    [UFunction("FUNC_Static")] public static void SetFloat(float v) { }
+                    [UFunction("FUNC_Static")] public static void SetDouble(double v) { }
+                }
+
+                public class FMod
+                {
+                    public static void Run()
+                    {
+                        KMLF.SetFloat(1.5f);
+                        KMLF.SetDouble(2.5);
+                        return;
+                    }
+                }
+                """;
+
+            var references = ((string)AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES")!)
+                .Split(Path.PathSeparator)
+                .Select(p => MetadataReference.CreateFromFile(p))
+                .ToList();
+            references.Add(MetadataReference.CreateFromFile(typeof(Polaris.Sdk.UObject).Assembly.Location));
+            var compilation = CSharpCompilation.Create(
+                "FloatProbe",
+                [CSharpSyntaxTree.ParseText(source)],
+                references,
+                new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
+            var method = compilation.GetTypeByMetadataName("FMod")!
+                .GetMembers("Run").OfType<IMethodSymbol>().Single();
+
+            var host = CardAsset.Open(env.CardEventAans, env.Usmap, Work(root, "float-card")).Asset;
+            var next = 0;
+            var expressions = Translator.Compile(
+                compilation,
+                method,
+                host,
+                new IndexResolver((_, _) => new FPackageIndex(--next)),
+                new FPackageIndex(3),
+                new FPackageIndex(1));
+
+            True(expressions.OfType<EX_FinalFunction>().First().Parameters[0] is EX_FloatConst, "float 实参");
+            True(expressions.OfType<EX_FinalFunction>().Last().Parameters[0] is EX_DoubleConst, "double 实参");
             var report = RoundTrip.Verify(expressions, host);
             True(report.Ok, "往返: " + report.Error);
         });

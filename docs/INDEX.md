@@ -21,7 +21,7 @@
 | `Polaris.Sdk` | [Runtime](src/Polaris.Sdk/Runtime.md) | ✅ 1 | 生成代码引用的运行时声明 |
 | `Polaris.Cli` | [Program](src/Polaris.Cli/Program.md) | ✅ 8 · 🚧 1 | `cards/pak/sdk/apply/check`；`scan/diff` 待做 |
 
-构建与验证：`.\run.ps1 build`（Solstice.Kismet → Sdk → SdkGen → SourceGen → Assets → Pak → Cli → Tests）、`.\run.ps1 verify`（19 个用例 + 编译闸 + 真实资产 roundtrip）。
+构建与验证：`.\run.ps1 build`（Solstice.Kismet → Sdk → SdkGen → SourceGen → Assets → Pak → Cli → Tests）、`.\run.ps1 verify`（20 个用例 + 编译闸 + 真实资产 roundtrip）。
 
 ## 2. 函数状态看板
 
