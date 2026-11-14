@@ -14,14 +14,14 @@
 | `Polaris.Assets` | [CardAsset](src/Polaris.Assets/CardAsset.md) · [CdoEditor](src/Polaris.Assets/CdoEditor.md) · [AssetDiff](src/Polaris.Assets/AssetDiff.md) · [FunctionBytes](src/Polaris.Assets/FunctionBytes.md) · [FunctionWriter](src/Polaris.Assets/FunctionWriter.md) · [AssetIndex](src/Polaris.Assets/AssetIndex.md) · [ClassPatcher](src/Polaris.Assets/ClassPatcher.md) | ✅ 7+5 · 🚧 4+5 | 读卡资产、改 CDO、函数字节校验/替换；bmap 与注入待做 |
 | `Polaris.Pak` | [ModPak](src/Polaris.Pak/ModPak.md) · [VENDORED](../../src/Polaris.Pak/VENDORED.md) | ✅ 3 | 继承 solstice-pak，输出 KARDS v3 mod pak |
 | `Polaris.TypeSystem` | [TypeMap](src/Polaris.TypeSystem/TypeMap.md) | 🚧 3 | C# 类型 ⇄ FProperty |
-| `Polaris.Compiler` | [Translator](src/Polaris.Compiler/Translator.md) · [BytecodeBuilder](src/Polaris.Compiler/BytecodeBuilder.md) · [BytecodeCheck](src/Polaris.Compiler/BytecodeCheck.md) · [AssetImportTable](src/Polaris.Compiler/AssetImportTable.md) · [ModPlanBuilder](src/Polaris.Compiler/ModPlanBuilder.md) · [KismetDecompiler](src/Polaris.Compiler/KismetDecompiler.md) · [KismetText](src/Polaris.Compiler/KismetText.md) · [UbergraphBuilder](src/Polaris.Compiler/UbergraphBuilder.md) | ✅ 2+1+1+4+1+3+1 · 🚧 2+3 | C# → 字节码（变量读写/out-ref/常量）+ 注解 + 写回 + 反编译/伪代码；ubergraph 待做 |
+| `Polaris.Compiler` | [Translator](src/Polaris.Compiler/Translator.md) · [BytecodeBuilder](src/Polaris.Compiler/BytecodeBuilder.md) · [BytecodeCheck](src/Polaris.Compiler/BytecodeCheck.md) · [AssetImportTable](src/Polaris.Compiler/AssetImportTable.md) · [ModPlanBuilder](src/Polaris.Compiler/ModPlanBuilder.md) · [KismetDecompiler](src/Polaris.Compiler/KismetDecompiler.md) · [KismetText](src/Polaris.Compiler/KismetText.md) · [LocalVariables](src/Polaris.Compiler/LocalVariables.md) · [UbergraphBuilder](src/Polaris.Compiler/UbergraphBuilder.md) | ✅ 2+1+1+4+1+3+1+1 · 🚧 2+3 | C# → 字节码（变量读写/out-ref/常量/局部变量）+ 注解 + 写回 + 反编译/伪代码；ubergraph 待做 |
 | `Polaris.Decompile` | [CSharpEmitter](src/Polaris.Decompile/CSharpEmitter.md) | 🚧 3 | 字节码 → 可读 C# |
 | `Polaris.SdkGen` | [SdkGenerator](src/Polaris.SdkGen/SdkGenerator.md) · [UsmapReader](src/Polaris.SdkGen/UsmapReader.md) · [JmapReader](src/Polaris.SdkGen/JmapReader.md) · [JmapFileReader](src/Polaris.SdkGen/JmapFileReader.md) · [Json](src/Polaris.SdkGen/Json.md) | ✅ 5 | 纯 jmap（或 usmap+jmap）→ C# SDK |
 | `Polaris.SourceGen` | [SdkSourceGenerator](src/Polaris.SourceGen/SdkSourceGenerator.md) | ✅ 1 | 增量源生成器（编译期生成 SDK） |
 | `Polaris.Sdk` | [Runtime](src/Polaris.Sdk/Runtime.md) | ✅ 1 | 生成代码引用的运行时声明 |
 | `Polaris.Cli` | [Program](src/Polaris.Cli/Program.md) | ✅ 9 · 🚧 1 | `cards/pak/sdk/apply/check/decompile`；`scan/diff` 待做 |
 
-构建与验证：`.\run.ps1 build`（Solstice.Kismet → Sdk → SdkGen → SourceGen → Assets → Pak → Cli → Tests）、`.\run.ps1 verify`（21 个用例 + 编译闸 + 真实资产 roundtrip）；`check-all` 全量 6492/6492。
+构建与验证：`.\run.ps1 build`（Solstice.Kismet → Sdk → SdkGen → SourceGen → Assets → Pak → Cli → Tests）、`.\run.ps1 verify`（22 个用例 + 编译闸 + 真实资产 roundtrip）；`check-all` 全量 6492/6492。
 
 ## 2. 函数状态看板
 
@@ -88,7 +88,8 @@
 '| Cli | [`ResolveAsset`](src/Polaris.Cli/Program.md#resolveassetcontent-string-asset-string-string) | ✅ | 注解路径 → 磁盘路径 |
 '| Cli | [`Check`](src/Polaris.Cli/Program.md#checkopts-options-int) | ✅ | 全函数往返覆盖率 |
 | Cli | [`Decompile`](src/Polaris.Cli/Program.md#decompileopts-options-int) | ✅ | 可读伪代码 |
-| Compiler | [`Format`](src/Polaris.Compiler/KismetText.md#formatnodes-ireadonlylistknode-asset-uasset-string) | ✅ | 节点树 → 伪代码 |''
+'| Compiler | [`Format`](src/Polaris.Compiler/KismetText.md#formatnodes-ireadonlylistknode-asset-uasset-string) | ✅ | 节点树 → 伪代码 |
+| Compiler | [`Ensure`](src/Polaris.Compiler/LocalVariables.md#ensurefunction-functionexport-asset-uasset-name-string-propertytype-string-elementsize-int-fproperty) | ✅ | 补局部变量属性 |'''
 | Cli | [`Diff`](src/Polaris.Cli/Program.md#diffbefore-string-after-string-diffreport) | 🚧 | 变更报告 |
 
 ## 3. 未实现清单（按影响面排序）

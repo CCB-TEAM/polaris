@@ -78,7 +78,8 @@ var bytecode = Translator.Compile(
     card.Asset,
     imports,
     functionIndex,
-    classIndex);
+    classIndex,
+    targetExport);
 
 var check = BytecodeCheck.Run(bytecode, card.Asset);
 if (!check.Ok)

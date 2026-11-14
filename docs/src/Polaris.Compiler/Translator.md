@@ -8,7 +8,7 @@
 
 ### `Compile(compilation: Compilation, method: IMethodSymbol, asset: UAsset, resolver: IFunctionResolver): KismetExpression[]`
 
-**状态：✅ 已实现**（测试用例「编译器：if/静态调用/return → 字节码 + 自校验」通过）
+**状态：✅ 已实现**（测试用例「编译器：if/静态调用/return → 字节码 + 自校验」「变量读写 + 往返」「局部变量声明：写回 + 重开往返」通过）
 
 - **签名与契约**：纯函数；返回顶层表达式数组（以 `EX_Return` + `EX_EndOfScript` 收尾）。方法必须有源码方法体；无 `[UClass]`/`[UFunction]` 元数据时抛 `CompileException`。
 - **输入输出**：`resolver` 把「UE 类全路径 + 函数名」映射成目标资产的 `FPackageIndex`；`asset` 用于 `FName`/序列化测量。
@@ -22,7 +22,7 @@
     其它 → 抛 CompileException
   末尾补 EX_Return(EX_Nothing) + EX_EndOfScript
   ```
-- **边界与失败**：只接受 `true/false` 条件与 int/bool/string 实参；实例方法、变量读写、算术一律报错（下一步实现）。
+- **边界与失败**：条件只接受 `true/false`；实参支持 int/bool/string/float/double 字面量与变量；算术/结构体常量仍报错。
 - **调用者与被调用者**：`Polaris.Cli apply`（后续）与测试调用；调用 `BytecodeBuilder`、`IFunctionResolver`。
 
 ## 已验证的字节码形态

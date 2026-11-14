@@ -96,6 +96,7 @@ internal static class TestRunner
         OutRefArgument(env, root);
         FloatConstants(env, root);
         DecompileText(env, root);
+        LocalVariableWriteback(env, root);
         Errors(env, root);
 
         Console.WriteLine();
@@ -862,6 +863,73 @@ internal static class TestRunner
             True(text.Contains("targetCard"), "参数名");
             True(text.Contains("persist["), "持久帧写入");
             Console.WriteLine("      " + text.Replace(Environment.NewLine, " | "));
+        });
+    }
+
+    private static void LocalVariableWriteback(TestContext env, string root)
+    {
+        Case("局部变量声明：写回 + 重开往返", () =>
+        {
+            const string source = """
+                using Polaris.Sdk;
+
+                [UClass("/Script/Engine.KismetMathLibrary")]
+                public class KMLX : UObject
+                {
+                    [UFunction("FUNC_Static")] public static int Abs_Int(int A) => 0;
+                }
+
+                public class LocMod
+                {
+                    public static void Run()
+                    {
+                        int x = 1;
+                        KMLX.Abs_Int(x);
+                        return;
+                    }
+                }
+                """;
+
+            var references = ((string)AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES")!)
+                .Split(Path.PathSeparator)
+                .Select(p => MetadataReference.CreateFromFile(p))
+                .ToList();
+            references.Add(MetadataReference.CreateFromFile(typeof(Polaris.Sdk.UObject).Assembly.Location));
+            var compilation = CSharpCompilation.Create(
+                "LocProbe",
+                [CSharpSyntaxTree.ParseText(source)],
+                references,
+                new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
+            var method = compilation.GetTypeByMetadataName("LocMod")!
+                .GetMembers("Run").OfType<IMethodSymbol>().Single();
+
+            var card = CardAsset.Open(env.CardEventAans, env.Usmap, Work(root, "loc-card"));
+            var function = card.Asset.Exports.OfType<UAssetAPI.ExportTypes.FunctionExport>()
+                .First(f => f.ObjectName.ToString() == "OnPlayedFromHand");
+            var before = function.LoadedProperties.Length;
+
+            var next = 0;
+            var expressions = Translator.Compile(
+                compilation,
+                method,
+                card.Asset,
+                new IndexResolver((_, _) => new FPackageIndex(--next)),
+                new FPackageIndex(3),
+                new FPackageIndex(1),
+                function);
+
+            True(function.LoadedProperties.Length == before + 1, "函数多了一个局部变量属性");
+            True(expressions.OfType<EX_Let>().Any(), "含局部变量赋值");
+            True(BytecodeCheck.Run(expressions, card.Asset).Ok, "字节码自校验");
+
+            FunctionWriter.Replace(card.Asset, "OnPlayedFromHand", expressions);
+            var saved = card.Save(Path.Combine(root, "loc-out"));
+            var reopened = CardAsset.Open(saved.UAssetPath, env.Usmap, Work(root, "loc-reopen"));
+            var target = reopened.Asset.Exports.OfType<UAssetAPI.ExportTypes.FunctionExport>()
+                .First(f => f.ObjectName.ToString() == "OnPlayedFromHand");
+            Equal(before + 1, target.LoadedProperties.Length);
+            var report = RoundTrip.Verify(target.ScriptBytecode!, reopened.Asset);
+            True(report.Ok, "重开往返: " + report.Error);
         });
     }
 

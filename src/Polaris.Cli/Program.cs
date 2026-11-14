@@ -256,7 +256,8 @@ internal static class Cli
                     card.Asset,
                     imports,
                     new FPackageIndex(card.Asset.Exports.IndexOf(function) + 1),
-                    new FPackageIndex(card.Asset.Exports.IndexOf(classExport) + 1));
+                    new FPackageIndex(card.Asset.Exports.IndexOf(classExport) + 1),
+                    function);
 
                 var check = BytecodeCheck.Run(bytecode, card.Asset);
                 if (!check.Ok)

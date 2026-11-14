@@ -33,7 +33,8 @@ public static class Translator
         UAsset asset,
         IFunctionResolver resolver,
         FPackageIndex? functionIndex = null,
-        FPackageIndex? classIndex = null)
+        FPackageIndex? classIndex = null,
+        UAssetAPI.ExportTypes.FunctionExport? targetFunction = null)
     {
         var syntax = method.DeclaringSyntaxReferences
             .Select(r => r.GetSyntax())
@@ -62,7 +63,8 @@ public static class Translator
             asset,
             resolver,
             functionIndex ?? new FPackageIndex(1),
-            classIndex ?? new FPackageIndex(2));
+            classIndex ?? new FPackageIndex(2),
+            targetFunction);
 
         var terminated = EmitStatements(statements, builder, context);
         if (!terminated)
@@ -79,7 +81,8 @@ public static class Translator
         UAsset Asset,
         IFunctionResolver Resolver,
         FPackageIndex FunctionIndex,
-        FPackageIndex ClassIndex);
+        FPackageIndex ClassIndex,
+        UAssetAPI.ExportTypes.FunctionExport? TargetFunction);
 
     private static bool EmitStatements(
         IEnumerable<StatementSyntax> statements,
@@ -96,6 +99,10 @@ public static class Translator
 
                 case IfStatementSyntax ifStatement:
                     EmitIf(ifStatement, builder, context);
+                    break;
+
+                case LocalDeclarationStatementSyntax local:
+                    EmitLocalDeclaration(local, builder, context);
                     break;
 
                 case ExpressionStatementSyntax { Expression: InvocationExpressionSyntax invocation }:
@@ -242,6 +249,51 @@ public static class Translator
         {
             New = new FFieldPath([], new FPackageIndex(0)),
         };
+
+    private static void EmitLocalDeclaration(
+        LocalDeclarationStatementSyntax declaration,
+        BytecodeBuilder builder,
+        Context context)
+    {
+        if (context.TargetFunction is null)
+        {
+            throw new CompileException("局部变量声明需要目标函数导出（写回模式）", declaration);
+        }
+
+        if (declaration.Declaration.Variables.Count != 1)
+        {
+            throw new CompileException("一次只支持声明一个局部变量", declaration);
+        }
+
+        var variable = declaration.Declaration.Variables[0];
+        var symbol = context.Model.GetDeclaredSymbol(variable) as ILocalSymbol
+            ?? throw new CompileException("无法解析局部变量", variable);
+        var (propertyType, elementSize) = PropertyTypeOf(symbol.Type, variable);
+
+        LocalVariables.Ensure(context.TargetFunction, context.Asset, symbol.Name, propertyType, elementSize);
+        if (variable.Initializer is null)
+        {
+            return;
+        }
+
+        var pointer = Pointer(symbol.Name, context.FunctionIndex, context.Asset);
+        builder.Emit(new EX_Let
+        {
+            Value = pointer,
+            Variable = new EX_LocalVariable { Variable = pointer },
+            Expression = EmitExpression(variable.Initializer.Value, context),
+        });
+    }
+
+    private static (string PropertyType, int ElementSize) PropertyTypeOf(ITypeSymbol type, SyntaxNode node) => type.SpecialType switch
+    {
+        SpecialType.System_Int32 => ("IntProperty", 4),
+        SpecialType.System_Boolean => ("BoolProperty", 1),
+        SpecialType.System_Single => ("FloatProperty", 4),
+        SpecialType.System_Double => ("DoubleProperty", 8),
+        SpecialType.System_Int64 => ("Int64Property", 8),
+        _ => throw new CompileException($"暂不支持的局部变量类型 {type}", node),
+    };
 
     private static void EmitAssignment(AssignmentExpressionSyntax assignment, BytecodeBuilder builder, Context context)
     {
