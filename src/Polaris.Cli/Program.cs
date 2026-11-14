@@ -22,7 +22,7 @@ internal static class Cli
              （或旧输入：--usmap <usmap> --catalog <functions.json>）
           apply        --mod <Mod.cs> --content <ContentRoot> --usmap <usmap> --out <dir>
                        [--sdk <GeneratedSdk.dll>] [--pak <mod.pak>]
-          check        --asset <uasset> | --dir <目录> [--limit N] --usmap <usmap>   往返覆盖率
+          check        --asset <uasset> | --dir <目录> [--limit N] --usmap <usmap> [--json <file>]
           decompile    --asset <uasset> | --dir <目录> --usmap <usmap> [--function <name>] [--strict] [--out <file|dir>]
 
         global options:
@@ -476,6 +476,29 @@ internal static class Cli
         foreach (var failure in failures.Take(10))
         {
             Console.WriteLine("  " + failure);
+        }
+
+        if (opts.Values.TryGetValue("json", out var jsonPath))
+        {
+            var payload = new
+            {
+                tool = "polaris check",
+                usmap,
+                ok,
+                total,
+                assets,
+                skipped,
+                failures = failures.ToArray(),
+            };
+            var jsonDir = Path.GetDirectoryName(Path.GetFullPath(jsonPath));
+            if (!string.IsNullOrEmpty(jsonDir))
+            {
+                Directory.CreateDirectory(jsonDir);
+            }
+
+            File.WriteAllText(jsonPath, System.Text.Json.JsonSerializer.Serialize(payload,
+                new System.Text.Json.JsonSerializerOptions { WriteIndented = true }));
+            Console.WriteLine($"json     {jsonPath}");
         }
 
         return ok == total ? 0 : 1;

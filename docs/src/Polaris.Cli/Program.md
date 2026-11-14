@@ -106,7 +106,7 @@
 
 **状态：✅ 已实现**（`card_event_aans` 2/2；全量 Cards 语料 6492/6492 函数（2039 资产，跳过 14））
 
-- **签名与契约**：`polaris check --asset <uasset>` 或 `--dir <Blueprints 目录> [--limit N]`（递归 `*.uasset`）+ `--usmap <usmap>`；对每个有字节码的函数跑 `RoundTrip.Verify`；全部一致返回 0，否则 1。
+- **签名与契约**：`polaris check --asset <uasset>` 或 `--dir <Blueprints 目录> [--limit N]`（递归 `*.uasset`）+ `--usmap <usmap> [--json <file>]`；对每个有字节码的函数跑 `RoundTrip.Verify`；`--json` 落基线（含 ok/total/assets/skipped/failures）；全部一致返回 0，否则 1。
 - **输入输出**：只读资产；打印 `roundtrip ok/total（百分比） across N assets，skipped M`，失败时打印前 10 条（函数名 + 差异偏移/token）；没有 CDO 的非卡资产计入 skipped。
 - **关键分支（伪代码）**：
   ```
