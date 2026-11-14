@@ -86,7 +86,7 @@ return;
 
 **状态：✅ 已实现**（测试「局部变量声明：写回 + 重开往返」覆盖 `x = x + 2` 与 `if (x > 1)`）
 
-- **签名与契约**：`+ - * / %` → `Add/Subtract/Multiply/Divide/Percent`；比较 `> < >= <= == !=` → `Greater/Less/GreaterEqual/LessEqual/EqualEqual/NotEqual`；位运算 `& | ^ << >>` → `BitwiseAnd/BitwiseOr/BitwiseXor/LeftShift/RightShift`（仅 int）；统一走 `EX_CallMath` 调 `KismetMathLibrary`（int `_IntInt`、float `_FloatFloat`、double `_DoubleDouble`、bool 相等 `_BoolBool`）。
+- **签名与契约**：`+ - * / %` → `Add/Subtract/Multiply/Divide/Percent`；比较 `> < >= <= == !=` → `Greater/Less/GreaterEqual/LessEqual/EqualEqual/NotEqual`；位运算 `& | ^ << >>` → `BitwiseAnd/BitwiseOr/BitwiseXor/LeftShift/RightShift`（仅 int）；字符串 `+`/`==`/`!=` → `Add/EqualEqual/NotEqual_StrStr`；逻辑 `&&`/`||` → `And/Or_BoolBool`（不短路）；统一走 `EX_CallMath` 调 `KismetMathLibrary`（int `_IntInt`、float `_FloatFloat`、double `_DoubleDouble`、bool 相等 `_BoolBool`）。
 - **输入输出**：运算数递归 `EmitExpression`；类型取 Roslyn 语义模型。
 - **关键分支（伪代码）**：
   ```

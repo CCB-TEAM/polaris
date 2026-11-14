@@ -189,6 +189,8 @@ public static class Translator
             SyntaxKind.ExclusiveOrExpression => "BitwiseXor",
             SyntaxKind.LeftShiftExpression => "LeftShift",
             SyntaxKind.RightShiftExpression => "RightShift",
+            SyntaxKind.LogicalAndExpression => "And",
+            SyntaxKind.LogicalOrExpression => "Or",
             _ => throw new CompileException($"暂不支持的运算符 {binary.OperatorToken.Text}", binary),
         };
 
@@ -200,12 +202,15 @@ public static class Translator
             or SyntaxKind.LeftShiftExpression
             or SyntaxKind.RightShiftExpression;
 
+        var kind = binary.Kind();
         var suffix = operandType?.SpecialType switch
         {
             SpecialType.System_Int32 => "IntInt",
             SpecialType.System_Single when !intOnly => "FloatFloat",
             SpecialType.System_Double when !intOnly => "DoubleDouble",
-            SpecialType.System_Boolean when binary.Kind() is SyntaxKind.EqualsExpression or SyntaxKind.NotEqualsExpression => "BoolBool",
+            SpecialType.System_Boolean when kind is SyntaxKind.EqualsExpression or SyntaxKind.NotEqualsExpression
+                or SyntaxKind.LogicalAndExpression or SyntaxKind.LogicalOrExpression => "BoolBool",
+            SpecialType.System_String when kind is SyntaxKind.AddExpression or SyntaxKind.EqualsExpression or SyntaxKind.NotEqualsExpression => "StrStr",
             _ => throw new CompileException($"暂不支持的运算数类型 {operandType}", binary),
         };
 
@@ -343,6 +348,7 @@ public static class Translator
         SpecialType.System_Single => ("FloatProperty", 4),
         SpecialType.System_Double => ("DoubleProperty", 8),
         SpecialType.System_Int64 => ("Int64Property", 8),
+        SpecialType.System_String => ("StrProperty", 16),
         _ => throw new CompileException($"暂不支持的局部变量类型 {type}", node),
     };
 
