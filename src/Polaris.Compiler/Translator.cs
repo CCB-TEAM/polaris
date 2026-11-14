@@ -82,7 +82,10 @@ public static class Translator
         IFunctionResolver Resolver,
         FPackageIndex FunctionIndex,
         FPackageIndex ClassIndex,
-        UAssetAPI.ExportTypes.FunctionExport? TargetFunction);
+        UAssetAPI.ExportTypes.FunctionExport? TargetFunction)
+    {
+        public Stack<(int Start, int End)> Loops { get; } = new();
+    }
 
     private static bool EmitStatements(
         IEnumerable<StatementSyntax> statements,
@@ -106,6 +109,24 @@ public static class Translator
 
                 case WhileStatementSyntax whileStatement:
                     EmitWhile(whileStatement, builder, context);
+                    break;
+
+                case BreakStatementSyntax:
+                    if (context.Loops.Count == 0)
+                    {
+                        throw new CompileException("break 不在循环里", statement);
+                    }
+
+                    builder.EmitJump(context.Loops.Peek().End);
+                    break;
+
+                case ContinueStatementSyntax:
+                    if (context.Loops.Count == 0)
+                    {
+                        throw new CompileException("continue 不在循环里", statement);
+                    }
+
+                    builder.EmitJump(context.Loops.Peek().Start);
                     break;
 
                 case LocalDeclarationStatementSyntax local:
@@ -168,9 +189,11 @@ public static class Translator
 
         builder.MarkLabel(startLabel);
         builder.EmitJumpIfNot(EmitCondition(whileStatement.Condition, context), endLabel);
+        context.Loops.Push((startLabel, endLabel));
         EmitStatements(whileStatement.Statement is BlockSyntax block
             ? block.Statements
             : [whileStatement.Statement], builder, context);
+        context.Loops.Pop();
         builder.EmitJump(startLabel);
         builder.MarkLabel(endLabel);
     }

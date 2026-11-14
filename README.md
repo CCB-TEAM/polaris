@@ -30,7 +30,7 @@ Polaris 是「**自研编译器 + UHT 风格 SDK**」的组合：
 | `return` 带返回值（`return 5;` → `EX_Return(IntConst)`） | ✅ |\n| 枚举成员常量（`ESideEnum.left` → `EX_ByteConst`） | ✅ |
 | 局部变量声明（`int x = 1;` → 补 FProperty + `EX_Let`，写回可重开） | ✅ |
 | 算术/比较/位运算/字符串/逻辑/一元表达式（含 `%`、`& \| ^ << >>`、`&& \|\|`、字符串拼接与比较） | ✅ |
-| 条件分支（`if (x > 1)` → 比较 + `EX_JumpIfNot`） | ✅ |\n| `while` 循环（条件 + 回跳） | ✅ |
+| 条件分支（`if (x > 1)` → 比较 + `EX_JumpIfNot`） | ✅ |\n| `while` 循环（条件 + 回跳 + `break`/`continue`） | ✅ |
 | `out`/`ref`/`const` 参数（从纯 jmap 的 CPF flags 推出） | ✅ |
 | 反编译 → 回编译字节一致（全量 Cards 语料 **6492/6492 函数**） | ✅ |
 | ubergraph 重排、蓝图类基座、BP→C# | 🚧 |

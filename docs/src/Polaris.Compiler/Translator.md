@@ -68,10 +68,10 @@ return;
 - **调用者与被调用者**：`Compile` 调用；依赖 `IFunctionResolver`。
 '### `EmitWhile(whileStatement: WhileStatementSyntax, builder: BytecodeBuilder, context: Context): void`
 
-**状态：✅ 已实现**（测试「局部变量声明：写回 + 重开往返」覆盖 `while (n < 3) { n = n + 1; }`）
+**状态：✅ 已实现**（测试覆盖 `while (n < 5) { ... if (n == 2) { break; } }`）
 
 - **签名与契约**：`start:` → `JumpIfNot(cond) -> end` → body → `Jump start` → `end:`。
-- **边界与失败**：不支持 `break`/`continue`/`do-while`；条件由 `EmitCondition` 生成。
+- **边界与失败**：支持 `break`/`continue`（跳 `end`/`start`，不嵌套时由 `Context.Loops` 栈解析）；不支持 `do-while`/`for`（`for` 可手写成 while）。
 - **调用者与被调用者**：`EmitStatements` 调用；依赖 `EmitCondition`、`BytecodeBuilder`。
 
 ### `EmitCondition(expression: ExpressionSyntax, context: Context): KismetExpression`'
