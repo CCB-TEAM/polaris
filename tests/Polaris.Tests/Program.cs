@@ -5,6 +5,7 @@ using Polaris.Compiler;
 using Polaris.Pak;
 using Polaris.SdkGen;
 using UAssetAPI;
+using UAssetAPI.Kismet.Bytecode;
 using UAssetAPI.Kismet.Bytecode.Expressions;
 using UAssetAPI.UnrealTypes;
 
@@ -87,6 +88,8 @@ internal static class TestRunner
         CompilerWriteback(env, root);
         CompilerInstanceCall(env, root);
         ModAnnotations(root);
+        VariablesAndRoundTrip(env, root);
+        RealFunctionRoundTrip(env, root);
         Errors(env, root);
 
         Console.WriteLine();
@@ -523,6 +526,82 @@ internal static class TestRunner
             Equal("OnPlayedFromHand", targets[0].FunctionName);
             Equal("T70Mod", targets[0].Class.Name);
             Equal("OnPlayed", targets[0].Method.Name);
+        });
+    }
+
+    private static void VariablesAndRoundTrip(TestContext env, string root)
+    {
+        Case("变量读写 + 反编译/回编译往返", () =>
+        {
+            const string source = """
+                using Polaris.Sdk;
+
+                [UClass("/Script/Engine.KismetMathLibrary")]
+                public class KML : UObject
+                {
+                    [UFunction("FUNC_Static")] public static int Abs_Int(int A) => 0;
+                }
+
+                public class VarMod
+                {
+                    public void Run(int x)
+                    {
+                        x = 1;
+                        KML.Abs_Int(x);
+                        return;
+                    }
+                }
+                """;
+
+            var references = ((string)AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES")!)
+                .Split(Path.PathSeparator)
+                .Select(p => MetadataReference.CreateFromFile(p))
+                .ToList();
+            references.Add(MetadataReference.CreateFromFile(typeof(Polaris.Sdk.UObject).Assembly.Location));
+            var compilation = CSharpCompilation.Create(
+                "VarProbe",
+                [CSharpSyntaxTree.ParseText(source)],
+                references,
+                new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
+            var method = compilation.GetTypeByMetadataName("VarMod")!
+                .GetMembers("Run").OfType<IMethodSymbol>().Single();
+
+            var host = CardAsset.Open(env.CardEventAans, env.Usmap, Work(root, "var-card")).Asset;
+            var next = 0;
+            var resolver = new IndexResolver((_, _) => new FPackageIndex(--next));
+            var expressions = Translator.Compile(compilation, method, host, resolver,
+                new FPackageIndex(3), new FPackageIndex(1));
+
+            True(expressions.Any(e => e.Token == EExprToken.EX_Let), "含 EX_Let（赋值）");
+            var call = expressions.OfType<EX_FinalFunction>().First();
+            True(call.Parameters[0] is EX_LocalVariable, "变量作实参 → EX_LocalVariable");
+            True(BytecodeCheck.Run(expressions, host).Ok, "字节码自校验");
+
+            var round = RoundTrip.Verify(expressions, host);
+            True(round.Ok, "往返: " + round.Error);
+            Console.WriteLine($"      {expressions.Length} 条指令；往返一致");
+        });
+    }
+
+    private static void RealFunctionRoundTrip(TestContext env, string root)
+    {
+        Case("真实函数反编译→回编译往返", () =>
+        {
+            var card = CardAsset.Open(env.CardEventAans, env.Usmap, Work(root, "rt-card"));
+            foreach (var name in new[] { "OnPlayedFromHand", "CanPlayFromHand" })
+            {
+                var function = card.Asset.Exports.OfType<UAssetAPI.ExportTypes.FunctionExport>()
+                    .FirstOrDefault(f => f.ObjectName.ToString() == name);
+                if (function?.ScriptBytecode is null)
+                {
+                    continue;
+                }
+
+                Console.WriteLine($"      {name} tokens: {string.Join(", ", function.ScriptBytecode.Select(e => e.Token.ToString()))}");
+                var report = RoundTrip.Verify(function.ScriptBytecode, card.Asset);
+                True(report.Ok, $"{name}: {report.Error}");
+                Console.WriteLine($"      {name} {function.ScriptBytecode.Length} 条表达式，往返一致");
+            }
         });
     }
 

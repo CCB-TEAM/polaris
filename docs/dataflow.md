@@ -5,17 +5,17 @@
 ## 1. 输入
 
 ```
-D:\files\projects\.tmp\polaris\kards.usmap     1.8 MB  9704 schema / 1875 enum
-D:\files\projects\jmap-out\functions.json      5.1 MB  1216 owner / 13064 函数
+kards1.60_No_UE4SS.jmap                       66 MB   9705 schema / 1876 enum / 1216 owner / 13064 函数
+（纯 jmap；usmap + functions.json 仍保留作旧输入）
 D:\devenv\fmodel\...\Blueprints\*              2137 个资产（每资产 .uasset + .uexp）
 ```
 
 ## 2. 链路 A：SDK 生成（✅）
 
 ```
-usmap ──► UsmapReader ─┐
-                        ├─► SdkEmitter ──► 485 文件 / 4357 类 / 5349 结构 /
-functions.json ─► JmapReader ─┘              1875 枚举 / 12617 方法 / 33754 字段
+jmap ──► JmapFileReader ──┐
+                            ├─► SdkEmitter ──► 484 文件 / 4356 类 / 5349 结构 /
+（旧：usmap+functions.json） ┘              1876 枚举 / 12617 方法 / 33756 字段
                                          │
                           ┌──────────────┴──────────────┐
                      CLI `polaris sdk`          SdkSourceGenerator
@@ -38,6 +38,7 @@ functions.json ─► JmapReader ─┘              1875 枚举 / 12617 方法 
   BytecodeBuilder（标签 → 函数内绝对字节偏移；长度用「序列化一次」测量）
         ▼
   BytecodeCheck（序列化 → 读回 → 指令起始/跳转目标校验）
+  KismetDecompiler/RoundTrip（反编译 → 回编译 → 字节比对）
         ▼
   AssetImportTable（/Script/Module.Class + 函数名 → FPackageIndex；
                     缺失时克隆同类模板追加到 Import 表尾）

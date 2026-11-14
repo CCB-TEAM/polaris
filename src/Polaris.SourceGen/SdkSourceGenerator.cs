@@ -1,5 +1,5 @@
-// Roslyn 增量源生成器：读 AdditionalFiles 里的 *.usmap 与 functions.json，
-// 用 Polaris.SdkGen 生成 SDK 源码（与 CLI `sdk` 用同一份 emitter）。
+// Roslyn 增量源生成器：优先读 AdditionalFiles 里的 *.jmap（纯 jmap），
+// 否则退回 *.usmap + functions.json。两种输入都用同一个 SdkEmitter。
 using System;
 using System.IO;
 using System.Linq;
@@ -21,7 +21,12 @@ public sealed class SdkSourceGenerator : IIncrementalGenerator
 
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
-        var usmap = context.AdditionalTextsProvider
+        var jmaps = context.AdditionalTextsProvider
+            .Where(t => t.Path.EndsWith(".jmap", StringComparison.OrdinalIgnoreCase))
+            .Select((t, _) => t.Path)
+            .Collect();
+
+        var usmaps = context.AdditionalTextsProvider
             .Where(t => t.Path.EndsWith(".usmap", StringComparison.OrdinalIgnoreCase))
             .Select((t, _) => t.Path)
             .Collect();
@@ -31,24 +36,33 @@ public sealed class SdkSourceGenerator : IIncrementalGenerator
             .Select((t, ct) => t.GetText(ct)?.ToString() ?? string.Empty)
             .Collect();
 
-        var input = usmap.Combine(catalogs);
+        var input = jmaps.Combine(usmaps).Combine(catalogs);
 
         context.RegisterSourceOutput(input, (spc, pair) =>
         {
-            var (usmapPaths, catalogsText) = pair;
-            var usmapPath = usmapPaths.FirstOrDefault();
-            var catalog = catalogsText.FirstOrDefault();
-            if (string.IsNullOrEmpty(usmapPath) || string.IsNullOrEmpty(catalog))
-            {
-                return; // 没有输入就不生成（不报错，允许其他项目引用同一个生成器）
-            }
+            var (jmapPaths, usmapPaths) = pair.Left;
+            var catalogsText = pair.Right;
 
             try
             {
-                var usmapBytes = File.ReadAllBytes(usmapPath);
-                var usmapFile = UsmapReader.Read(usmapBytes);
-                var owners = JmapReader.Read(catalog);
-                var result = SdkEmitter.Emit(usmapFile, owners);
+                SdkResult? result = null;
+
+                if (jmapPaths.FirstOrDefault() is { } jmapPath)
+                {
+                    var parsed = JmapFileReader.ReadFile(jmapPath);
+                    result = SdkEmitter.Emit(parsed.Usmap, parsed.Owners);
+                }
+                else if (usmapPaths.FirstOrDefault() is { } usmapPath && catalogsText.FirstOrDefault() is { } catalog)
+                {
+                    var usmapFile = UsmapReader.Read(File.ReadAllBytes(usmapPath));
+                    var owners = JmapReader.Read(catalog);
+                    result = SdkEmitter.Emit(usmapFile, owners);
+                }
+
+                if (result is null)
+                {
+                    return; // 没有输入就不生成（不报错，允许其他项目引用同一个生成器）
+                }
 
                 foreach (var file in result.Files)
                 {

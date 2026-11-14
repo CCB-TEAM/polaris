@@ -18,18 +18,18 @@ Polaris 是「**自研编译器 + UHT 风格 SDK**」的组合：
 
 | 能力 | 状态 |
 |---|---|
-| usmap + jmap → **UHT 风格 C# SDK**（485 文件 / 4357 类 / 5349 结构 / 1875 枚举 / 12617 方法） | ✅ |
+| **纯 jmap** → **UHT 风格 C# SDK**（484 文件 / 4356 类 / 5349 结构 / 1876 枚举 / 12617 方法） | ✅ |
 | Roslyn **增量源生成器**（编译期自动生成 SDK） | ✅ |
 | CDO 改值（原生父类成员：`kredits`/`attack`/`has*`…；改值 / 补差量条目 / Reset） | ✅ |
 | mod `.pak` 导出（v3 / store / mount `../../../kards/Content/`，对真实 mod pak 逐字节验证） | ✅ |
 | 编译器：静态调用 / 实例调用（`EX_Context`）/ `if-else` / `return` / 字面量 | ✅ |
 | 写回既有函数 + 导入解析（其余函数字节不变） | ✅ |\n| **数据注解**：`[PolarisAsset]`/`[PolarisReplace]` 把「目标资产 + 目标函数」放进 mod 源码 | ✅ |
-| 变量读写、ubergraph 重排、蓝图类基座、BP→C# | 🚧 |
+| 变量读写（赋值 / 变量作实参） | ✅ |\n| 反编译 → 回编译字节一致（`EX_Context`/`EX_LocalFinalFunction`/`EX_Let`/持久帧 Let） | ✅ |\n| ubergraph 重排、蓝图类基座、BP→C# | 🚧 |
 
 ## 数据流
 
 ```
-usmap + functions.json ──► UsmapReader/JmapReader ──► SdkEmitter ──► UHT 风格 SDK
+jmap（纯）──► JmapFileReader ──► SdkEmitter ──► UHT 风格 SDK
                                                        ├─ CLI `polaris sdk`
                                                        └─ SdkSourceGenerator（编译期）
 
@@ -139,13 +139,13 @@ src/Polaris.Pak/        v3 pak 读写（vendored from solstice-pak，MIT）
 src/Polaris.Cli/        polaris cards|pak|sdk
 docs/                   架构、数据流、ADR、逐函数契约
 samples/                CardModDemo（CDO）/ BytecodeMod（字节码）/ SdkConsumer / SdkGenConsumer
-tests/                  Polaris.Tests（12 个用例）
+tests/                  Polaris.Tests（15 个用例）
 ```
 
 ## 限制
 
 - 只支持 KARDS / UE 5.6 实测过的格式；不保证其他版本。
-- 编译器是子集：变量读写、`out/ref` 实参、struct 常量、ubergraph 事件体还没做。
+- 编译器是子集：`out/ref` 实参、struct 常量、ubergraph 事件体还没做。
 - 运行期行为**未在游戏内验证**（静态闸全绿不等于运行正确）。
 - 不新增资产（不做新卡）；不做可视化编辑器。
 

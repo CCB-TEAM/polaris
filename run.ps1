@@ -61,6 +61,12 @@ switch ($Task) {
             dotnet run --project (Join-Path $root 'src\Polaris.Cli') -- sdk --usmap $usmap --catalog $catalog --out $sdkOut
         }
     }
+    'sdk-jmap' {
+        $jmap = Join-Path $repo 'kards\Content\Paks\kards1.60_No_UE4SS.jmap'
+        Step 'sdk (pure jmap)' {
+            dotnet run --project (Join-Path $root 'src\Polaris.Cli') -- sdk --jmap $jmap --out (Join-Path $repo '.tmp\polaris\sdk-jmap')
+        }
+    }
     'list' {
         if (-not $Arg) { throw '用法: .\run.ps1 list <card.uasset>' }
         dotnet run --project (Join-Path $root 'src\Polaris.Cli') -- cards list --asset $Arg --usmap $usmap

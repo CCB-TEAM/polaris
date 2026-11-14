@@ -9,11 +9,14 @@
     <!-- 输入可用 -p:UsmapFile=... -p:CatalogFile=... 覆盖 -->
     <UsmapFile Condition="'$(UsmapFile)' == ''">D:\files\projects\.tmp\polaris\kards.usmap</UsmapFile>
     <CatalogFile Condition="'$(CatalogFile)' == ''">D:\files\projects\jmap-out\functions.json</CatalogFile>
+    <!-- 纯 jmap：-p:JmapFile=...；给了就优先于 usmap+catalog -->
+    <JmapFile Condition="'$(JmapFile)' == ''"></JmapFile>
   </PropertyGroup>
 
   <ItemGroup>
     <AdditionalFiles Include="$(UsmapFile)" />
     <AdditionalFiles Include="$(CatalogFile)" />
+    <AdditionalFiles Include="$(JmapFile)" Condition="'$(JmapFile)' != ''" />
     <Analyzer Include="..\..\src\Polaris.SourceGen\bin\Debug\net10.0\Polaris.SourceGen.dll" />
   </ItemGroup>
 

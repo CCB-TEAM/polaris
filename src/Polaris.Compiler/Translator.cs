@@ -102,6 +102,10 @@ public static class Translator
                     builder.Emit(EmitCall(invocation, context));
                     break;
 
+                case ExpressionStatementSyntax { Expression: AssignmentExpressionSyntax assignment }:
+                    EmitAssignment(assignment, builder, context);
+                    break;
+
                 case BlockSyntax block:
                     if (EmitStatements(block.Statements, builder, context))
                     {
@@ -169,7 +173,7 @@ public static class Translator
         var parameters = new List<KismetExpression>();
         foreach (var argument in invocation.ArgumentList.Arguments)
         {
-            parameters.Add(EmitLiteral(argument.Expression, context.Model));
+            parameters.Add(EmitExpression(argument.Expression, context));
         }
 
         var call = new EX_FinalFunction
@@ -239,21 +243,46 @@ public static class Translator
             New = new FFieldPath([], new FPackageIndex(0)),
         };
 
-    private static KismetExpression EmitLiteral(ExpressionSyntax expression, SemanticModel model)
+    private static void EmitAssignment(AssignmentExpressionSyntax assignment, BytecodeBuilder builder, Context context)
     {
-        var constant = model.GetConstantValue(expression);
-        if (!constant.HasValue)
+        if (!assignment.IsKind(SyntaxKind.SimpleAssignmentExpression))
         {
-            throw new CompileException($"只支持字面量参数: {expression}", expression);
+            throw new CompileException("只支持 = 赋值", assignment);
         }
 
-        return constant.Value switch
+        var target = EmitReceiver(assignment.Left, context);
+        var value = EmitExpression(assignment.Right, context);
+        var pointer = target is EX_VariableBase variable
+            ? variable.Variable
+            : throw new CompileException("赋值目标必须是变量", assignment.Left);
+        builder.Emit(new EX_Let
         {
-            int i => new EX_IntConst { Value = i },
-            bool b => b ? new EX_True() : new EX_False(),
-            string s => new EX_StringConst { Value = s },
-            _ => throw new CompileException($"不支持的字面量类型 {constant.Value?.GetType()}", expression),
-        };
+            Value = pointer,
+            Variable = target,
+            Expression = value,
+        });
+    }
+
+    private static KismetExpression EmitExpression(ExpressionSyntax expression, Context context)
+    {
+        var constant = context.Model.GetConstantValue(expression);
+        if (constant.HasValue)
+        {
+            return constant.Value switch
+            {
+                int i => new EX_IntConst { Value = i },
+                bool b => b ? new EX_True() : new EX_False(),
+                string s => new EX_StringConst { Value = s },
+                _ => throw new CompileException($"不支持的字面量类型 {constant.Value?.GetType()}", expression),
+            };
+        }
+
+        if (expression is InvocationExpressionSyntax invocation)
+        {
+            return EmitCall(invocation, context);
+        }
+
+        return EmitReceiver(expression, context);
     }
 
     private static string? GetUClassPath(INamedTypeSymbol type)

@@ -14,7 +14,8 @@ internal static class Cli
           cards set    --asset <uasset> --usmap <usmap> --set name=value [--set ...] --out <dir> [--pak <mod.pak>]
           cards reset  --asset <uasset> --usmap <usmap> --reset name [--reset ...] --out <dir> [--pak <mod.pak>]
           pak          --pak <mod.pak> --file <abs path> [--file ...] [--content-root <dir>] [--mount <point>]
-          sdk          --usmap <usmap> --catalog <functions.json> --out <dir> [--filter kards,Engine]
+          sdk          --jmap <x.jmap> --out <dir> [--filter kards,Engine]
+             （或旧输入：--usmap <usmap> --catalog <functions.json>）
 
         global options:
           --work <dir>         工作目录（usmap 副本与字节码校验用），默认 .polaris-work
@@ -162,12 +163,24 @@ internal static class Cli
 
     private static int Sdk(Options opts)
     {
-        var usmapBytes = File.ReadAllBytes(opts.Require("usmap"));
-        var catalogText = File.ReadAllText(opts.Require("catalog"));
         var outDir = opts.Require("out");
+        UsmapFile usmapFile;
+        IReadOnlyDictionary<string, JmapOwner> owners;
 
-        var usmapFile = UsmapReader.Read(usmapBytes);
-        var owners = JmapReader.Read(catalogText);
+        if (opts.Values.TryGetValue("jmap", out var jmapPath))
+        {
+            var parsed = JmapFileReader.ReadFile(jmapPath);
+            usmapFile = parsed.Usmap;
+            owners = parsed.Owners;
+            Console.WriteLine($"jmap     {Path.GetFileName(jmapPath)}（纯 jmap 输入）");
+        }
+        else
+        {
+            var usmapBytes = File.ReadAllBytes(opts.Require("usmap"));
+            var catalogText = File.ReadAllText(opts.Require("catalog"));
+            usmapFile = UsmapReader.Read(usmapBytes);
+            owners = JmapReader.Read(catalogText);
+        }
         var filter = opts.Values.TryGetValue("filter", out var f)
             ? f.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
             : null;
