@@ -172,6 +172,19 @@ public static class Translator
         return EmitExpression(expression, context);
     }
 
+    private static KismetExpression EnumConstant(IFieldSymbol field, Context context)
+    {
+        var enumType = (INamedTypeSymbol)field.Type;
+        var raw = Convert.ToInt64(field.ConstantValue);
+        return enumType.EnumUnderlyingType?.SpecialType switch
+        {
+            SpecialType.System_Byte => new EX_ByteConst { Value = (byte)raw },
+            SpecialType.System_SByte => new EX_ByteConst { Value = (byte)(sbyte)raw },
+            SpecialType.System_Int64 => new EX_Int64Const { Value = raw },
+            _ => new EX_IntConst { Value = (int)raw },
+        };
+    }
+
     private static KismetExpression EmitBinary(BinaryExpressionSyntax binary, Context context)
     {
         var op = binary.Kind() switch
@@ -387,8 +400,22 @@ public static class Translator
                 string s => new EX_StringConst { Value = s },
                 float f => new EX_FloatConst { Value = f },
                 double d => new EX_DoubleConst { Value = d },
+                byte by => new EX_ByteConst { Value = by },
+                sbyte sb => new EX_ByteConst { Value = (byte)sb },
+                short sh => new EX_IntConst { Value = sh },
+                ushort us => new EX_IntConst { Value = us },
+                long l => new EX_Int64Const { Value = l },
+                uint ui => new EX_IntConst { Value = (int)ui },
+                ulong ul => new EX_Int64Const { Value = (long)ul },
                 _ => throw new CompileException($"不支持的字面量类型 {constant.Value?.GetType()}", expression),
             };
+        }
+
+        if (context.Model.GetSymbolInfo(expression).Symbol is IFieldSymbol { HasConstantValue: true } enumField
+            && enumField.Type.TypeKind == TypeKind.Enum
+            && enumField.ConstantValue is not null)
+        {
+            return EnumConstant(enumField, context);
         }
 
         if (expression is InvocationExpressionSyntax invocation)

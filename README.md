@@ -27,7 +27,7 @@ Polaris 是「**自研编译器 + UHT 风格 SDK**」的组合：
 | `polaris apply`：注解 mod 一条命令写回（函数 + CDO 字段）+ 出 pak；多资产时每卡一个 pak；参数名不匹配直接报错；输出目录写 `mod.json` 清单 | ✅ |
 | **数据注解**：`[PolarisAsset]`/`[PolarisReplace]`/`[PolarisPatch]` 放进 mod 源码 | ✅ |
 | 变量读写（赋值 / 变量作实参 / `out`、`ref` 实参） | ✅ |
-| `return` 带返回值（`return 5;` → `EX_Return(IntConst)`） | ✅ |
+| `return` 带返回值（`return 5;` → `EX_Return(IntConst)`） | ✅ |\n| 枚举成员常量（`ESideEnum.left` → `EX_ByteConst`） | ✅ |
 | 局部变量声明（`int x = 1;` → 补 FProperty + `EX_Let`，写回可重开） | ✅ |
 | 算术/比较/位运算/字符串/逻辑/一元表达式（含 `%`、`& \| ^ << >>`、`&& \|\|`、字符串拼接与比较） | ✅ |
 | 条件分支（`if (x > 1)` → 比较 + `EX_JumpIfNot`） | ✅ |
@@ -156,7 +156,7 @@ src/Polaris.Pak/        v3 pak 读写（vendored from solstice-pak，MIT）
 src/Polaris.Cli/        polaris cards|pak|sdk
 docs/                   架构、数据流、ADR、逐函数契约
 samples/                CardModDemo（CDO）/ BytecodeMod（字节码）/ SdkConsumer / SdkGenConsumer
-tests/                  Polaris.Tests（24 个用例）
+tests/                  Polaris.Tests（25 个用例）
 ```
 
 ## 限制

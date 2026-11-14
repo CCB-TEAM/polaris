@@ -99,6 +99,7 @@ internal static class TestRunner
         LocalVariableWriteback(env, root);
         ModPatches();
         ReturnValue(env, root);
+        EnumConstants(env, root);
         Errors(env, root);
 
         Console.WriteLine();
@@ -1027,6 +1028,57 @@ internal static class TestRunner
 
             var ret = expressions.OfType<EX_Return>().First();
             True(ret.ReturnExpression is EX_IntConst { Value: 5 }, $"return 5: {ret.ReturnExpression?.Token} tok={string.Join(",", expressions.Select(e => e.Token))}");
+            var report = RoundTrip.Verify(expressions, host);
+            True(report.Ok, "往返: " + report.Error);
+        });
+    }
+
+    private static void EnumConstants(TestContext env, string root)
+    {
+        Case("枚举成员 → 常量（ByteConst）", () =>
+        {
+            const string source = """
+                using Polaris.Sdk;
+
+                public enum EProbe : byte { Left = 1, Right = 2 }
+
+                [UClass("/Script/Test.KML")]
+                public class KMLE : UObject
+                {
+                    [UFunction("FUNC_Static")] public static void Use(EProbe e) { }
+                }
+
+                public class ENMod
+                {
+                    public static void Run()
+                    {
+                        KMLE.Use(EProbe.Left);
+                    }
+                }
+                """;
+
+            var references = ((string)AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES")!)
+                .Split(Path.PathSeparator)
+                .Select(p => MetadataReference.CreateFromFile(p))
+                .ToList();
+            references.Add(MetadataReference.CreateFromFile(typeof(Polaris.Sdk.UObject).Assembly.Location));
+            var compilation = CSharpCompilation.Create(
+                "EnumProbe",
+                [CSharpSyntaxTree.ParseText(source)],
+                references,
+                new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
+            var method = compilation.GetTypeByMetadataName("ENMod")!
+                .GetMembers("Run").OfType<IMethodSymbol>().Single();
+
+            var host = CardAsset.Open(env.CardEventAans, env.Usmap, Work(root, "enum-card")).Asset;
+            var expressions = Translator.Compile(
+                compilation,
+                method,
+                host,
+                new IndexResolver((_, _) => new FPackageIndex(-1)));
+
+            var call = expressions.OfType<EX_FinalFunction>().First();
+            True(call.Parameters[0] is EX_ByteConst { Value: 1 }, "EProbe.Left -> EX_ByteConst 1");
             var report = RoundTrip.Verify(expressions, host);
             True(report.Ok, "往返: " + report.Error);
         });

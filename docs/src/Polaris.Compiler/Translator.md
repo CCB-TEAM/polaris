@@ -82,7 +82,15 @@ return;
 - **边界与失败**：取负仅数值类型；其它一元运算抛 `CompileException`。
 - **调用者与被调用者**：`EmitExpression` 调用。
 
-### `EmitBinary(binary: BinaryExpressionSyntax, context: Context): KismetExpression`'
+'### `EnumConstant(field: IFieldSymbol, context: Context): KismetExpression`
+
+**状态：✅ 已实现**（测试「枚举成员 → 常量（ByteConst）」）
+
+- **签名与契约**：枚举成员按底层类型发常量：`byte/sbyte` → `EX_ByteConst`，`long` → `EX_Int64Const`，其余 → `EX_IntConst`。
+- **边界与失败**：只有 `HasConstantValue` 的枚举成员走这里；普通字段仍走变量指针。
+- **调用者与被调用者**：`EmitExpression` 调用。
+
+### `EmitBinary(binary: BinaryExpressionSyntax, context: Context): KismetExpression`''
 
 **状态：✅ 已实现**（测试「局部变量声明：写回 + 重开往返」覆盖 `x = x + 2` 与 `if (x > 1)`）
 
