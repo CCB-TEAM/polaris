@@ -68,13 +68,21 @@ return;
 - **调用者与被调用者**：`Compile` 调用；依赖 `IFunctionResolver`。
 '### `EmitWhile(whileStatement: WhileStatementSyntax, builder: BytecodeBuilder, context: Context): void`
 
-**状态：✅ 已实现**（测试覆盖 `while (n < 5) { ... if (n == 2) { break; } }`）
+**状态：✅ 已实现**（测试覆盖 `while (n < 5) { ... if (n == 2) { break; } }`，`break` 已实际执行）
 
 - **签名与契约**：`start:` → `JumpIfNot(cond) -> end` → body → `Jump start` → `end:`。
 - **边界与失败**：支持 `break`/`continue`（跳 `end`/`start`，不嵌套时由 `Context.Loops` 栈解析）；不支持 `do-while`/`for`（`for` 可手写成 while）。
 - **调用者与被调用者**：`EmitStatements` 调用；依赖 `EmitCondition`、`BytecodeBuilder`。
 
-### `EmitCondition(expression: ExpressionSyntax, context: Context): KismetExpression`'
+'### `EmitFor(forStatement: ForStatementSyntax, builder: BytecodeBuilder, context: Context): void`
+
+**状态：✅ 已实现**（测试覆盖 `for (int i = 0; i < 3; i++) { x = x + i; }`）
+
+- **签名与契约**：声明 → 初始化 → `start:` → `JumpIfNot(cond) -> end` → body → 增量 → `Jump start` → `end:`；`i++`/`i--` 生成 `i = Add/Subtract_i(i, 1)`。
+- **边界与失败**：条件/增量必填；`++/--` 仅支持局部数值变量；`break`/`continue` 由 `Context.Loops` 栈解析。
+- **调用者与被调用者**：`EmitStatements`；依赖 `EmitLocalVariable`、`EmitStep`、`EmitCondition`。
+
+### `EmitCondition(expression: ExpressionSyntax, context: Context): KismetExpression`''
 
 **状态：✅ 已实现**（测试「局部变量声明：写回 + 重开往返」覆盖 `if (x > 1)`）
 

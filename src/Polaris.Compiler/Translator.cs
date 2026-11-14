@@ -111,6 +111,14 @@ public static class Translator
                     EmitWhile(whileStatement, builder, context);
                     break;
 
+                case ForStatementSyntax forStatement:
+                    EmitFor(forStatement, builder, context);
+                    break;
+
+                case ExpressionStatementSyntax { Expression: PostfixUnaryExpressionSyntax or PrefixUnaryExpressionSyntax } stepStatement:
+                    EmitStepStatement(stepStatement.Expression, builder, context);
+                    break;
+
                 case BreakStatementSyntax:
                     if (context.Loops.Count == 0)
                     {
@@ -196,6 +204,99 @@ public static class Translator
         context.Loops.Pop();
         builder.EmitJump(startLabel);
         builder.MarkLabel(endLabel);
+    }
+
+    private static void EmitFor(ForStatementSyntax forStatement, BytecodeBuilder builder, Context context)
+    {
+        if (forStatement.Declaration is { } declaration)
+        {
+            foreach (var variable in declaration.Variables)
+            {
+                EmitLocalVariable(variable, builder, context);
+            }
+        }
+
+        foreach (var initializer in forStatement.Initializers)
+        {
+            EmitStepStatement(initializer, builder, context);
+        }
+
+        var startLabel = builder.NewLabel();
+        var endLabel = builder.NewLabel();
+        builder.MarkLabel(startLabel);
+        builder.EmitJumpIfNot(EmitCondition(forStatement.Condition, context), endLabel);
+        context.Loops.Push((startLabel, endLabel));
+        EmitStatements(forStatement.Statement is BlockSyntax block
+            ? block.Statements
+            : [forStatement.Statement], builder, context);
+        context.Loops.Pop();
+
+        foreach (var incrementor in forStatement.Incrementors)
+        {
+            EmitStepStatement(incrementor, builder, context);
+        }
+
+        builder.EmitJump(startLabel);
+        builder.MarkLabel(endLabel);
+    }
+
+    private static void EmitStepStatement(ExpressionSyntax expression, BytecodeBuilder builder, Context context)
+    {
+        if (expression is PostfixUnaryExpressionSyntax or PrefixUnaryExpressionSyntax)
+        {
+            var operand = expression is PostfixUnaryExpressionSyntax post ? post.Operand : ((PrefixUnaryExpressionSyntax)expression).Operand;
+            var delta = expression.IsKind(SyntaxKind.PostIncrementExpression) || expression.IsKind(SyntaxKind.PreIncrementExpression) ? 1 : -1;
+            EmitStep(operand, delta, expression, builder, context);
+            return;
+        }
+
+        if (expression is InvocationExpressionSyntax invocation)
+        {
+            builder.Emit(EmitCall(invocation, context));
+            return;
+        }
+
+        if (expression is AssignmentExpressionSyntax assignment)
+        {
+            EmitAssignment(assignment, builder, context);
+            return;
+        }
+
+        throw new CompileException($"不支持的 for 子句: {expression}", expression);
+    }
+
+    private static void EmitStep(
+        ExpressionSyntax target,
+        int delta,
+        SyntaxNode node,
+        BytecodeBuilder builder,
+        Context context)
+    {
+        if (context.TargetFunction is null || context.Model.GetSymbolInfo(target).Symbol is not ILocalSymbol local)
+        {
+            throw new CompileException("++/-- 只支持局部变量", node);
+        }
+
+        var pointer = new EX_LocalVariable { Variable = Pointer(local.Name, context.FunctionIndex, context.Asset) };
+        var operandType = context.Model.GetTypeInfo(target).Type;
+        var (suffix, one) = operandType?.SpecialType switch
+        {
+            SpecialType.System_Int32 => ("IntInt", (KismetExpression)new EX_IntConst { Value = 1 }),
+            SpecialType.System_Single => ("FloatFloat", new EX_FloatConst { Value = 1 }),
+            SpecialType.System_Double => ("DoubleDouble", new EX_DoubleConst { Value = 1 }),
+            _ => throw new CompileException($"++/-- 不支持的类型 {operandType}", node),
+        };
+
+        builder.Emit(new EX_Let
+        {
+            Value = Pointer(local.Name, context.FunctionIndex, context.Asset),
+            Variable = new EX_LocalVariable { Variable = Pointer(local.Name, context.FunctionIndex, context.Asset) },
+            Expression = new EX_CallMath
+            {
+                StackNode = context.Resolver.Resolve("/Script/Engine.KismetMathLibrary", (delta > 0 ? "Add_" : "Subtract_") + suffix),
+                Parameters = [pointer, one],
+            },
+        });
     }
 
     private static KismetExpression EmitCondition(ExpressionSyntax expression, Context context)
@@ -368,17 +469,24 @@ public static class Translator
         BytecodeBuilder builder,
         Context context)
     {
-        if (context.TargetFunction is null)
-        {
-            throw new CompileException("局部变量声明需要目标函数导出（写回模式）", declaration);
-        }
-
         if (declaration.Declaration.Variables.Count != 1)
         {
             throw new CompileException("一次只支持声明一个局部变量", declaration);
         }
 
-        var variable = declaration.Declaration.Variables[0];
+        EmitLocalVariable(declaration.Declaration.Variables[0], builder, context);
+    }
+
+    private static void EmitLocalVariable(
+        VariableDeclaratorSyntax variable,
+        BytecodeBuilder builder,
+        Context context)
+    {
+        if (context.TargetFunction is null)
+        {
+            throw new CompileException("局部变量声明需要目标函数导出（写回模式）", variable);
+        }
+
         var symbol = context.Model.GetDeclaredSymbol(variable) as ILocalSymbol
             ?? throw new CompileException("无法解析局部变量", variable);
         var (propertyType, elementSize) = PropertyTypeOf(symbol.Type, variable);
