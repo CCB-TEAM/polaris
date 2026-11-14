@@ -92,6 +92,8 @@ internal static class TestRunner
         RealFunctionRoundTrip(env, root);
         RoundTripIf(env, root);
         RoundTripCoverage(env, root);
+        NoOpSaveFidelity(env, root);
+        OutRefArgument(env, root);
         Errors(env, root);
 
         Console.WriteLine();
@@ -706,6 +708,109 @@ internal static class TestRunner
             }
 
             True(ok * 100 >= total * 95, $"覆盖率不足: {ok}/{total}");
+        });
+    }
+
+    private static void NoOpSaveFidelity(TestContext env, string root)
+    {
+        Case("无改动保存：.uexp 逐字节一致", () =>
+        {
+            foreach (var path in new[]
+            {
+                Path.Combine(env.Root, "Cards", "BP_CardFunctions.uasset"),
+                env.CardEventAans,
+            })
+            {
+                if (!File.Exists(path))
+                {
+                    continue;
+                }
+
+                var card = CardAsset.Open(path, env.Usmap, Work(root, "noop-" + Path.GetFileNameWithoutExtension(path)));
+                var saved = card.Save(Path.Combine(root, "noop-out-" + Path.GetFileNameWithoutExtension(path)));
+                var same = card.OriginalUExpBytes.SequenceEqual(saved.UExp);
+                Console.WriteLine($"      {Path.GetFileName(path)}: uexp {(same ? "一致" : "不同")}（{saved.UExp.Length} / {card.OriginalUExpBytes.Length}）");
+                True(same, $"{Path.GetFileName(path)} 无改动保存后 .uexp 变了");
+            }
+        });
+    }
+
+    private static int IndexOfBlock(byte[] haystack, byte[] needle)
+    {
+        for (var i = 0; i + needle.Length <= haystack.Length; i++)
+        {
+            var match = true;
+            for (var j = 0; j < needle.Length; j++)
+            {
+                if (haystack[i + j] != needle[j])
+                {
+                    match = false;
+                    break;
+                }
+            }
+
+            if (match)
+            {
+                return i;
+            }
+        }
+
+        return -1;
+    }
+
+    private static void OutRefArgument(TestContext env, string root)
+    {
+        Case("out/ref 实参：变量令牌 + 往返", () =>
+        {
+            const string source = """
+                using Polaris.Sdk;
+
+                [UClass("/Script/Engine.KismetMathLibrary")]
+                public class KML3 : UObject
+                {
+                    [UFunction("FUNC_Static")] public static void Assign(out int x) { x = 0; }
+                    [UFunction("FUNC_Static")] public static void Bump(ref int x) { }
+                }
+
+                public class RefMod
+                {
+                    public void Run(int y)
+                    {
+                        KML3.Assign(out y);
+                        KML3.Bump(ref y);
+                        return;
+                    }
+                }
+                """;
+
+            var references = ((string)AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES")!)
+                .Split(Path.PathSeparator)
+                .Select(p => MetadataReference.CreateFromFile(p))
+                .ToList();
+            references.Add(MetadataReference.CreateFromFile(typeof(Polaris.Sdk.UObject).Assembly.Location));
+            var compilation = CSharpCompilation.Create(
+                "RefProbe",
+                [CSharpSyntaxTree.ParseText(source)],
+                references,
+                new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
+            var method = compilation.GetTypeByMetadataName("RefMod")!
+                .GetMembers("Run").OfType<IMethodSymbol>().Single();
+
+            var host = CardAsset.Open(env.CardEventAans, env.Usmap, Work(root, "ref-card")).Asset;
+            var next = 0;
+            var expressions = Translator.Compile(
+                compilation,
+                method,
+                host,
+                new IndexResolver((_, _) => new FPackageIndex(--next)),
+                new FPackageIndex(3),
+                new FPackageIndex(1));
+
+            var calls = expressions.OfType<EX_FinalFunction>().ToList();
+            True(calls.Count == 2, "两次调用");
+            True(calls.All(c => c.Parameters[0] is EX_LocalVariable), "out/ref 实参都是变量令牌");
+            var report = RoundTrip.Verify(expressions, host);
+            True(report.Ok, "往返: " + report.Error);
         });
     }
 

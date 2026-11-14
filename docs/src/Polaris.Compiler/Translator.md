@@ -62,7 +62,7 @@ return;
 **状态：✅ 已实现（静态 + 实例调用；变量参数仍 🚧）**
 
 - **签名与契约**：一次调用 → 对应形态：本资产导出 → `EX_LocalVirtualFunction`；`FUNC_Static` → `EX_FinalFunction`；非静态 → `EX_Context`。
-- **输入输出**：静态 → `EX_FinalFunction`；实例 → `EX_Context` 包 `EX_FinalFunction`，接收者支持 `this`（`EX_Self`）、字段（`EX_InstanceVariable`）、参数/局部（`EX_LocalVariable`）；`Offset` = 内层调用的序列化长度。
+- **输入输出**：静态 → `EX_FinalFunction`；实例 → `EX_Context` 包 `EX_FinalFunction`，接收者支持 `this`（`EX_Self`）、字段（`EX_InstanceVariable`）、参数/局部（`EX_LocalVariable`）；`out`/`ref` 实参同样发变量令牌（`EX_LocalVariable`）；`Offset` = 内层调用的序列化长度。
 - **关键分支（伪代码）**：`flags 含 FUNC_Static ? Final : (本资产导出 ? Virtual : Context)`。
 - **边界与失败**：名字歧义报错列候选；占位参数必须显式给出。
 - **调用者与被调用者**：`Compile` 调用；依赖 `IFunctionResolver`。
