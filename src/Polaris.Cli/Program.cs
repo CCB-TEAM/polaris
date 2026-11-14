@@ -487,6 +487,7 @@ internal static class Cli
         }
 
         var stubs = 0;
+        var stubItems = new List<object>();
         foreach (var function in card.Asset.Exports.OfType<UAssetAPI.ExportTypes.FunctionExport>())
         {
             if (ReferenceEquals(function, ubergraph) || function.ScriptBytecode is not { Length: > 0 })
@@ -507,11 +508,43 @@ internal static class Cli
                     var landed = starts.Contains((uint)entry.Value);
                     var next = starts.FirstOrDefault(s => s >= entry.Value, (uint)block.Length);
                     Console.WriteLine($"  {function.ObjectName}: entry={entry.Value} landed={landed} next={next} delta={next - entry.Value}");
+                    stubItems.Add(new
+                    {
+                        function = function.ObjectName.ToString(),
+                        entry = entry.Value,
+                        landed,
+                        next,
+                        delta = next - entry.Value,
+                    });
                 }
             }
         }
 
         Console.WriteLine($"stubs      {stubs}");
+
+        if (opts.Values.TryGetValue("json", out var jsonPath))
+        {
+            var payload = new
+            {
+                tool = "polaris ubergraph",
+                asset = Path.GetFileName(opts.Require("asset")),
+                ubergraph = ubergraph.ObjectName.ToString(),
+                expressions = ubergraph.ScriptBytecode.Length,
+                bytes = block.Length,
+                starts = starts.Count,
+                computedJumpOperand = computed?.CodeOffsetExpression?.Token.ToString(),
+                stubs = stubItems.ToArray(),
+            };
+            var dir = Path.GetDirectoryName(Path.GetFullPath(jsonPath));
+            if (!string.IsNullOrEmpty(dir))
+            {
+                Directory.CreateDirectory(dir);
+            }
+
+            File.WriteAllText(jsonPath, System.Text.Json.JsonSerializer.Serialize(payload,
+                new System.Text.Json.JsonSerializerOptions { WriteIndented = true }));
+            Console.WriteLine($"json       {jsonPath}");
+        }
         return 0;
     }
 

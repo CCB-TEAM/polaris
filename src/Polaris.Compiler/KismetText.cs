@@ -83,6 +83,9 @@ public static class KismetText
     private static string Const(KismetExpression expression) => expression switch
     {
         EX_IntConst i => i.Value.ToString(),
+        EX_ByteConst b => b.Value.ToString(),
+        EX_Int64Const l => l.Value.ToString() + "L",
+        EX_UInt64Const ul => ul.Value.ToString() + "UL",
         EX_True => "true",
         EX_False => "false",
         EX_StringConst s => "\"" + s.Value.Replace("\"", "\\\"") + "\"",

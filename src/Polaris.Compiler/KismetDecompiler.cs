@@ -205,6 +205,12 @@ public static class KismetDecompiler
         {
             case EX_IntConst i:
                 return new KConst(new EX_IntConst { Value = i.Value });
+            case EX_ByteConst b:
+                return new KConst(new EX_ByteConst { Value = b.Value });
+            case EX_Int64Const l:
+                return new KConst(new EX_Int64Const { Value = l.Value });
+            case EX_UInt64Const ul:
+                return new KConst(new EX_UInt64Const { Value = ul.Value });
             case EX_True:
                 return new KConst(new EX_True());
             case EX_False:

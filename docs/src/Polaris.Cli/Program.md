@@ -151,7 +151,7 @@
 
 **状态：✅ 已实现**（`card_event_aans`：ubergraph 9 条 / 367 字节，1 个 stub，`entry=10` 不落在指令起点；`BP_CardFunctions`：59 条 / 2035 字节，10 个 stub）
 
-- **签名与契约**：`polaris ubergraph --asset <uasset> --usmap <usmap>`；打印 ubergraph 规模、`EX_ComputedJump` 操作数类型，以及每个事件存根的入口值与落点。
+- **签名与契约**：`polaris ubergraph --asset <uasset> --usmap <usmap> [--json <file>]`；打印 ubergraph 规模、`EX_ComputedJump` 操作数类型，以及每个事件存根的入口值与落点；`--json` 输出可归档的诊断基线。
 - **输入输出**：只读；每个 stub 输出 `entry`、是否落在解析出的指令起点、最近起点与差值。
 - **关键分支（伪代码）**：
   ```
