@@ -3,18 +3,19 @@
 **职责**：字节码 ↔ 自有节点树。反编译（`KismetExpression[]` → `KNode`）与回编译（`KNode` → `KismetExpression[]`），
 用「反编译 → 回编译 → 字节比对」确认实现对既有函数无损。
 **对外入口**：`KismetDecompiler.Decompile` / `KismetRecompiler.Recompile` / `RoundTrip.Verify`。
-**内部结构**：节点类型 `KConst`/`KVar`/`KCall`/`KLet`/`KPersist`/`KReturn`/`KEnd`；回编译用 `BytecodeBuilder` 重新发指令并回填跳转。
+**内部结构**：节点类型 `KConst`/`KVar`/`KCall`/`KLet`/`KPersist`/`KReturn`/`KEnd`/`KSeq`/`KIf`；回编译用 `BytecodeBuilder` 重新发指令并回填跳转。
 **依赖**：UAssetAPI（表达式类型 + 序列化）。
 **取舍**：只覆盖编译器子集；遇到不认识的指令抛 `NotSupportedException`（不静默降级）。`EX_LocalFinalFunction` 与 `EX_FinalFunction` 分开保留（否则回编译字节会变）。
 
 ### `Decompile(expressions: IReadOnlyList<KismetExpression>): IReadOnlyList<KNode>`
 
-**状态：✅ 已实现**（`card_event_aans.OnPlayedFromHand`：4 条表达式往返一致）
+**状态：✅ 已实现**（`card_event_aans.OnPlayedFromHand` 4 条表达式、if/else 分支程序均往返一致）
 
-- **签名与契约**：纯函数；不解析跳转（遇到 `EX_Jump*` 抛 `NotSupportedException`）。
+- **签名与契约**：纯函数；解析 `EX_JumpIfNot` + `EX_Jump` 的 if/else 模式；其它跳转形态抛 `NotSupportedException`。
 - **输入输出**：常量 → `KConst`；`EX_LocalVariable`/`EX_InstanceVariable` → `KVar`；`EX_FinalFunction`/`EX_LocalFinalFunction`/`EX_Context` → `KCall`；`EX_Let` → `KLet`；`EX_LetValueOnPersistentFrame` → `KPersist`；`EX_Return`/`EX_EndOfScript` → `KReturn`/`KEnd`。
 - **关键分支（伪代码）**：
   ```
+  顶层按 starts[] 解析 JumpIfNot/if-else → KIf(cond, KSeq(then), KSeq(else)/null)
   switch expr:
     IntConst/True/False/String/Nothing/Self → KConst
     LocalVariable/InstanceVariable → KVar(instance?)

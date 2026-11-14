@@ -37,6 +37,8 @@ public sealed class JmapParam
 {
     public string Name = "";
     public string Dir = "in";
+    public bool Ref;
+    public bool Const;
     public JmapType Type = new();
 }
 

@@ -90,6 +90,7 @@ internal static class TestRunner
         ModAnnotations(root);
         VariablesAndRoundTrip(env, root);
         RealFunctionRoundTrip(env, root);
+        RoundTripIf(env, root);
         Errors(env, root);
 
         Console.WriteLine();
@@ -602,6 +603,58 @@ internal static class TestRunner
                 True(report.Ok, $"{name}: {report.Error}");
                 Console.WriteLine($"      {name} {function.ScriptBytecode.Length} 条表达式，往返一致");
             }
+        });
+    }
+
+    private static void RoundTripIf(TestContext env, string root)
+    {
+        Case("反编译：if/else 跳转往返", () =>
+        {
+            const string source = """
+                using Polaris.Sdk;
+
+                [UClass("/Script/Engine.KismetMathLibrary")]
+                public class KML2 : UObject
+                {
+                    [UFunction("FUNC_Static")] public static int Abs_Int(int A) => 0;
+                }
+
+                public class IfMod
+                {
+                    public static void Run()
+                    {
+                        if (true) { KML2.Abs_Int(1); } else { KML2.Abs_Int(2); }
+                        return;
+                    }
+                }
+                """;
+
+            var references = ((string)AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES")!)
+                .Split(Path.PathSeparator)
+                .Select(p => MetadataReference.CreateFromFile(p))
+                .ToList();
+            references.Add(MetadataReference.CreateFromFile(typeof(Polaris.Sdk.UObject).Assembly.Location));
+            var compilation = CSharpCompilation.Create(
+                "IfProbe",
+                [CSharpSyntaxTree.ParseText(source)],
+                references,
+                new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
+            var method = compilation.GetTypeByMetadataName("IfMod")!
+                .GetMembers("Run").OfType<IMethodSymbol>().Single();
+
+            var host = CardAsset.Open(env.CardEventAans, env.Usmap, Work(root, "if-card")).Asset;
+            var next = 0;
+            var expressions = Translator.Compile(
+                compilation,
+                method,
+                host,
+                new IndexResolver((_, _) => new FPackageIndex(--next)),
+                new FPackageIndex(3),
+                new FPackageIndex(1));
+
+            True(expressions.Any(e => e.Token == EExprToken.EX_JumpIfNot), "含条件跳转");
+            var report = RoundTrip.Verify(expressions, host);
+            True(report.Ok, "往返: " + report.Error);
         });
     }
 

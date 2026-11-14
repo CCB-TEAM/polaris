@@ -244,7 +244,7 @@ public static class SdkEmitter
             var ps = fn.Params.Where(p => p.Dir != "return").ToList();
             var paramText = string.Join(", ", ps.Select(p =>
             {
-                var prefix = p.Dir == "out" ? "out " : "";
+                var prefix = p.Dir == "out" ? "out " : p.Ref ? "ref " : "";
                 return $"{prefix}{names.RenderJmapType(p.Type)} {Sanitize(p.Name)}";
             }));
 

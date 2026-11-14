@@ -110,6 +110,8 @@ public static class JmapFileReader
                 {
                     Name = GetString(property, "name") ?? "",
                     Dir = dir,
+                    Ref = flags.Contains("CPF_ReferenceParm", StringComparison.Ordinal),
+                    Const = flags.Contains("CPF_ConstParm", StringComparison.Ordinal),
                     Type = ReadParamType(property),
                 });
             }

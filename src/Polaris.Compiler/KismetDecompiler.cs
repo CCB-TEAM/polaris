@@ -23,12 +23,87 @@ public sealed record KReturn(KNode? Value) : KNode;
 
 public sealed record KEnd : KNode;
 
+public sealed record KSeq(IReadOnlyList<KNode> Items) : KNode;
+
+public sealed record KIf(KNode Condition, KNode Then, KNode? Else) : KNode;
+
 public sealed record RoundTripReport(bool Ok, string? Error);
 
 public static class KismetDecompiler
 {
-    public static IReadOnlyList<KNode> Decompile(IReadOnlyList<KismetExpression> expressions)
-        => expressions.Select(DecompileExpression).ToList();
+    public static IReadOnlyList<KNode> Decompile(IReadOnlyList<KismetExpression> expressions, UAsset asset)
+        => DecompileRange(expressions, 0, expressions.Count, asset, Starts(expressions, asset));
+
+    private static IReadOnlyList<KNode> DecompileRange(
+        IReadOnlyList<KismetExpression> expressions,
+        int start,
+        int end,
+        UAsset asset,
+        IReadOnlyList<uint> starts)
+    {
+        var nodes = new List<KNode>();
+        var i = start;
+        while (i < end)
+        {
+            if (expressions[i] is EX_JumpIfNot conditional)
+            {
+                var target = IndexOf(starts, conditional.CodeOffset);
+                var jump = i + 1;
+                while (jump < end && expressions[jump] is not EX_Jump)
+                {
+                    jump++;
+                }
+
+                if (jump < end && expressions[jump] is EX_Jump jumpExpression)
+                {
+                    var finish = IndexOf(starts, jumpExpression.CodeOffset);
+                    var thenNodes = DecompileRange(expressions, i + 1, jump, asset, starts);
+                    var elseNodes = DecompileRange(expressions, jump + 1, finish, asset, starts);
+                    nodes.Add(new KIf(DecompileExpression(conditional.BooleanExpression), new KSeq(thenNodes), new KSeq(elseNodes)));
+                    i = finish;
+                }
+                else
+                {
+                    var thenNodes = DecompileRange(expressions, i + 1, target, asset, starts);
+                    nodes.Add(new KIf(DecompileExpression(conditional.BooleanExpression), new KSeq(thenNodes), null));
+                    i = target;
+                }
+
+                continue;
+            }
+
+            nodes.Add(DecompileExpression(expressions[i]));
+            i++;
+        }
+
+        return nodes;
+    }
+
+    private static IReadOnlyList<uint> Starts(IReadOnlyList<KismetExpression> expressions, UAsset asset)
+    {
+        var starts = new uint[expressions.Count];
+        uint position = 0;
+        for (var i = 0; i < expressions.Count; i++)
+        {
+            starts[i] = position;
+            position += BytecodeBuilder.Measure(expressions[i], asset);
+        }
+
+        return starts;
+    }
+
+    private static int IndexOf(IReadOnlyList<uint> starts, uint offset)
+    {
+        for (var i = 0; i < starts.Count; i++)
+        {
+            if (starts[i] == offset)
+            {
+                return i;
+            }
+        }
+
+        throw new NotSupportedException($"跳转目标 {offset} 不是指令起始");
+    }
 
     private static KNode DecompileExpression(KismetExpression expression)
     {
@@ -128,6 +203,31 @@ public static class KismetRecompiler
             case KEnd:
                 builder.Emit(new EX_EndOfScript());
                 break;
+            case KSeq seq:
+                foreach (var item in seq.Items)
+                {
+                    Emit(item, builder, asset);
+                }
+
+                break;
+            case KIf conditional:
+                var elseLabel = builder.NewLabel();
+                var endLabel = builder.NewLabel();
+                builder.EmitJumpIfNot(BuildExpression(conditional.Condition, asset), elseLabel);
+                Emit(conditional.Then, builder, asset);
+                if (conditional.Else is null)
+                {
+                    builder.MarkLabel(elseLabel);
+                }
+                else
+                {
+                    builder.EmitJump(endLabel);
+                    builder.MarkLabel(elseLabel);
+                    Emit(conditional.Else, builder, asset);
+                    builder.MarkLabel(endLabel);
+                }
+
+                break;
             default:
                 throw new NotSupportedException($"回编译器暂不支持 {node.GetType().Name}");
         }
@@ -181,7 +281,7 @@ public static class RoundTrip
     {
         try
         {
-            var nodes = KismetDecompiler.Decompile(expressions);
+            var nodes = KismetDecompiler.Decompile(expressions, asset);
             var rebuilt = KismetRecompiler.Recompile(nodes, asset);
             var before = Serialize(expressions, asset);
             var after = Serialize(rebuilt, asset);

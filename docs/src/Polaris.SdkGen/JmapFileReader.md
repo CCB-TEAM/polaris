@@ -11,7 +11,7 @@
 **状态：✅ 已实现**（66 MB 的 `kards1.60_No_UE4SS.jmap`：9705 schema / 1876 enum / 1216 owner / 13064 函数，生成 484 文件后全量编译 0 错误）
 
 - **签名与契约**：纯函数（读文件）；返回 `UsmapFile` + `Dictionary<string,JmapOwner>`；文件缺 `objects` 抛 `FormatException`。
-- **输入输出**：`Class` → StructKind=2，`Struct/ScriptStruct` → 1；`super_struct` 取短名/模块；函数参数方向由 `CPF_ReturnParm`/`CPF_OutParm` 推出。
+- **输入输出**：`Class` → StructKind=2，`Struct/ScriptStruct` → 1；`super_struct` 取短名/模块；函数参数方向由 `CPF_ReturnParm`/`CPF_OutParm` 推出，`ref`/`const` 由 `CPF_ReferenceParm`/`CPF_ConstParm` 推出。
 - **关键分支（伪代码）**：
   ```
   parse doc → objects
