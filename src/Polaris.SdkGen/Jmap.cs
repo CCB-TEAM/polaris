@@ -24,7 +24,7 @@ public sealed class JmapType
         }
 
         t.Type = o["type"]?.AsString() ?? "";
-        t.ClassPath = o["class"]?.AsString();
+        t.ClassPath = (o["class"] ?? o["property_class"])?.AsString();
         t.EnumPath = o["enum"]?.AsString();
         t.Inner = o["inner"] is null ? null : FromJson(o["inner"]);
         t.Key = o["key"] is null ? null : FromJson(o["key"]);

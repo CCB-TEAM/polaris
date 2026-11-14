@@ -110,7 +110,22 @@ if (canIt) { targetCard.CampaignAddAttack(2, false); }
 
 Flora：`JumpIfNot → 130`（`landedFlora=True`），CDO 多出 `selectTargetOnPlayedFromHand = true`。
 
-## 10. 已知风险''''
+'## 10. G1g：通过 `cardFunction` 调 CardFunctionsStub（待测）
+
+`BaseCardObject` 上有成员 `cardFunction`（类型 `CardFunctionsStub`，jmap 的 `property_class`），真卡的抽牌/转换/回手都是通过它调的。
+
+产物：`D:\files\projects\.tmp\polaris\g1g\card_unit_t_70eot_g1g.pak`（7883 字节），源码 [samples/G1gMod.cs](../../samples/G1gMod.cs)。
+
+```csharp
+targetCard.cardFunction.MoveUnitFromBoardToOwnersHand(targetCard, 0);
+targetCard.cardFunction.DrawSpecificCardFromDeckBySide(0, targetCard.CardID, ESideEnum.left, true);
+```
+
+**预期**：打出该卡后它立刻被收回手牌（`MoveUnitFromBoardToOwnersHand`）；抽指定 ID 的牌在 ID 不存在时无效果。
+
+`DrawCardsFromDeckBySide` 这类带 `out TArray<int>` 的抽牌函数还需要数组局部变量支持（见 PLAN）。
+
+## 11. 已知风险'''''
 
 - 该资产的跳转/入口偏移与解析布局不一致（见 `docs/PLAN.md §9`），但我们替换的是**平坦函数** `OnPlayedFromHand`，不触碰 ubergraph 段重排；写回后已通过 `RoundTrip.Verify`。
 - 若游戏启动即崩，优先怀疑 pak 格式/挂载路径；可用 `polaris pak` 重新核对条目路径。

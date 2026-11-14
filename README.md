@@ -170,7 +170,7 @@ tests/                  Polaris.Tests（25 个用例）
 
 ''## 运行期验证 ✅
 
-参考别的卡的逻辑做 mod 的示例：[samples/G1dMod.cs](samples/G1dMod.cs)（从 `card_event_spirit_of_rome.CanPlayFromHand` 搬 `IsInfantry` 条件分支）；指向性卡牌示例：[samples/G1fMod.cs](samples/G1fMod.cs)（CDO `selectTargetOnPlayedFromHand` + `CanBeTargetted`）。'
+参考别的卡的逻辑做 mod 的示例：[samples/G1dMod.cs](samples/G1dMod.cs)（从 `card_event_spirit_of_rome.CanPlayFromHand` 搬 `IsInfantry` 条件分支）；指向性卡牌示例：[samples/G1fMod.cs](samples/G1fMod.cs)（CDO `selectTargetOnPlayedFromHand` + `CanBeTargetted`）；`CardFunctionsStub` 调用示例：[samples/G1gMod.cs](samples/G1gMod.cs)（`targetCard.cardFunction.*`）。'
 
 **G1 已通过**：`card_unit_t_70eot` 的 mod pak（CDO `kredits` 2 → 0 + `OnPlayedFromHand` 字节码替换）在真实游戏里生效。
 细节与复现步骤：[docs/verification/g1-card-unit-t70eot.md](docs/verification/g1-card-unit-t70eot.md)。'
