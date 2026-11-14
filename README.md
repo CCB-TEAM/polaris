@@ -117,7 +117,7 @@ dotnet run --project samples/BytecodeMod -- <Content> <kards.usmap> out
 dotnet run --project src/Polaris.Cli -- apply `
   --mod samples/BytecodeMod/Mod.cs --content <Content> `
   --usmap <kards.usmap> --out out `
-  --sdk samples/SdkConsumer/bin/Debug/net10.0/SdkConsumer.dll --pak out/mod.pak
+  --sdk samples/SdkConsumer/bin/Debug/net10.0/SdkConsumer.dll --pak out/mod.pak [--dry-run]
 ```
 
 实测：

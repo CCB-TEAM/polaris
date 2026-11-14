@@ -77,7 +77,7 @@
 
 **状态：✅ 已实现**（`samples/BytecodeMod/Mod.cs` → `card_unit_t_70eot.OnPlayedFromHand`，3 条表达式，pak 7650 字节）
 
-- **签名与契约**：`polaris apply --mod <Mod.cs> --content <ContentRoot> --usmap <usmap> --out <dir> [--sdk <DLL>] [--pak <mod.pak>]`；成功返回 0，编译/标注/校验失败返回 1。
+- **签名与契约**：`polaris apply --mod <Mod.cs> --content <ContentRoot> --usmap <usmap> --out <dir> [--sdk <DLL>] [--pak <mod.pak>] [--dry-run]`；成功返回 0，编译/标注/校验失败返回 1。`--dry-run` 只编译+校验、不写盘；写回后会重开并对待写函数跑 `RoundTrip.Verify`。
 - **输入输出**：读取 mod 源码；`[PolarisAsset]` 支持相对路径、`/Game/...`、绝对路径；按资产分组写回，非目标函数必须字节不变；`--pak` 给出则出包。
 - **关键分支（伪代码）**：
   ```

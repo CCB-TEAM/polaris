@@ -191,6 +191,7 @@ internal static class Cli
         var usmap = opts.Require("usmap");
         var outDir = opts.Require("out");
         var source = File.ReadAllText(modPath);
+        var dryRun = opts.Values.ContainsKey("dry-run");
 
         var refs = ((string?)AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES") ?? "")
             .Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries)
@@ -271,6 +272,13 @@ internal static class Cli
                 Console.WriteLine($"mod      {Path.GetFileName(assetPath)} :: {target.FunctionName}（{bytecode.Length} 条）");
             }
 
+            if (dryRun)
+            {
+                Console.WriteLine($"plan     {Path.GetFileName(assetPath)}：{replaced.Count} 个函数（dry-run，不写盘）");
+                replacedTotal += replaced.Count;
+                continue;
+            }
+
             var saved = card.Save(outDir);
             var reopened = CardAsset.Open(saved.UAssetPath, usmap, Path.Combine(opts.Work, "_apply_verify"));
             var after = FunctionBytes.Hashes(reopened.Asset);
@@ -279,6 +287,24 @@ internal static class Cli
                 if (!replaced.Contains(name) && after[name] != hash)
                 {
                     Console.Error.WriteLine("其他函数被改动: " + name);
+                    return 1;
+                }
+            }
+
+            foreach (var name in replaced)
+            {
+                var written = reopened.Asset.Exports.OfType<UAssetAPI.ExportTypes.FunctionExport>()
+                    .FirstOrDefault(f => f.ObjectName.ToString() == name);
+                if (written?.ScriptBytecode is null)
+                {
+                    Console.Error.WriteLine("重开后找不到函数: " + name);
+                    return 1;
+                }
+
+                var roundtrip = RoundTrip.Verify(written.ScriptBytecode, reopened.Asset);
+                if (!roundtrip.Ok)
+                {
+                    Console.Error.WriteLine($"{name}: 写回后往返失败 " + roundtrip.Error);
                     return 1;
                 }
             }
@@ -659,7 +685,7 @@ internal static class Cli
                 continue;
             }
 
-            if (key == "strict")
+            if (key is "strict" or "dry-run")
             {
                 o.Values[key] = "1";
                 continue;
