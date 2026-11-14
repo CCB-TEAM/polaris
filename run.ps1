@@ -55,6 +55,9 @@ switch ($Task) {
 
         # 闸 C：源生成器在编译期产出同一份 SDK
         Step 'SdkGenConsumer' { dotnet build (Join-Path $root 'samples\SdkGenConsumer\SdkGenConsumer.csproj') -v q }
+
+        # 闸 D：真实资产「反编译 → 回编译」覆盖率
+        Step 'assets roundtrip' { & $PSCommandPath check }
     }
     'sdk' {
         Step 'sdk dump' {
@@ -65,6 +68,19 @@ switch ($Task) {
         $jmap = Join-Path $repo 'kards\Content\Paks\kards1.60_No_UE4SS.jmap'
         Step 'sdk (pure jmap)' {
             dotnet run --project (Join-Path $root 'src\Polaris.Cli') -- sdk --jmap $jmap --out (Join-Path $repo '.tmp\polaris\sdk-jmap')
+        }
+    }
+    'check' {
+        $bp = if ($env:POLARIS_BP_ROOT) { $env:POLARIS_BP_ROOT } else { 'D:\devenv\fmodel\Output\Exports\kards\Content\Blueprints' }
+        $assets = @(
+            (Join-Path $bp 'Cards\BP_CardFunctions.uasset'),
+            (Join-Path $bp 'Cards\ANZAC\events\card_event_aans.uasset'),
+            (Join-Path $bp 'Cards\Soviet\Allegiance\units\card_unit_t_70eot.uasset')
+        ) | Where-Object { Test-Path $_ }
+        foreach ($asset in $assets) {
+            Step "check $(Split-Path $asset -Leaf)" {
+                dotnet run --project (Join-Path $root 'src\Polaris.Cli') --no-build -- check --asset $asset --usmap $usmap
+            }
         }
     }
     'list' {
