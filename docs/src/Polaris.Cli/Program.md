@@ -72,3 +72,32 @@
 - **关键分支（伪代码）**：`逐函数字节 hash 比较 → 只对变化项做结构 diff`。
 - **边界与失败**：hash 相同但结构不同不可能；结构相同但字节不同必须报出来。
 - **调用者与被调用者**：未来的 `apply` 回归用；调用 `KismetWorkspace.VerifyAll`。
+
+### `Apply(opts: Options): int`
+
+**状态：✅ 已实现**（`samples/BytecodeMod/Mod.cs` → `card_unit_t_70eot.OnPlayedFromHand`，3 条表达式，pak 7650 字节）
+
+- **签名与契约**：`polaris apply --mod <Mod.cs> --content <ContentRoot> --usmap <usmap> --out <dir> [--sdk <DLL>] [--pak <mod.pak>]`；成功返回 0，编译/标注/校验失败返回 1。
+- **输入输出**：读取 mod 源码；`[PolarisAsset]` 支持相对路径、`/Game/...`、绝对路径；按资产分组写回，非目标函数必须字节不变；`--pak` 给出则出包。
+- **关键分支（伪代码）**：
+  ```
+  compile(mod, refs=TPA+Sdk+--sdk)
+  targets = ModPlanBuilder.FindTargets(compilation)
+  foreach asset group:
+      card = CardAsset.Open; before = FunctionBytes.Hashes
+      foreach target: compile → BytecodeCheck → FunctionWriter.Replace
+      save; reopen; 其余函数哈希不变? else 失败
+      if --pak: ModPak.Build
+  ```
+- **边界与失败**：无标注/资产或函数不存在 → 退出 1；不覆盖输入资产；生成 SDK 以 DLL 传入（CLI 不运行时生成）。
+- **调用者与被调用者**：`polaris apply`；调用 `ModPlanBuilder`、`Translator`、`BytecodeCheck`、`FunctionWriter`、`CardAsset`、`ModPak`、`ResolveAsset`。
+
+### `ResolveAsset(content: string, asset: string): string`
+
+**状态：✅ 已实现**
+
+- **签名与契约**：纯函数；`/Game/` 前缀去前缀拼 content；绝对路径原样；相对路径拼 content。
+- **输入输出**：不做存在性检查（由 `Apply` 报错）。
+- **关键分支（伪代码）**：`startsWith("/Game/") ? content + rest : IsPathRooted ? asset : content + asset`。
+- **边界与失败**：路径分隔符统一为平台分隔符。
+- **调用者与被调用者**：`Apply` 调用。

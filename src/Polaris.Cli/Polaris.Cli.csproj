@@ -3,6 +3,7 @@
     <OutputType>Exe</OutputType>
     <RootNamespace>Polaris.Cli</RootNamespace>
     <AssemblyName>polaris</AssemblyName>
+    <RoslynDir>$(MSBuildToolsPath)\Roslyn\bincore</RoslynDir>
   </PropertyGroup>
 
   <ItemGroup>
@@ -18,6 +19,22 @@
     </Reference>
     <Reference Include="Polaris.Pak">
       <HintPath>..\Polaris.Pak\bin\Debug\net10.0\Polaris.Pak.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+    <Reference Include="Polaris.Compiler">
+      <HintPath>..\Polaris.Compiler\bin\Debug\net10.0\Polaris.Compiler.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+    <Reference Include="Polaris.Sdk">
+      <HintPath>..\Polaris.Sdk\bin\Debug\net10.0\Polaris.Sdk.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+    <Reference Include="Microsoft.CodeAnalysis">
+      <HintPath>$(RoslynDir)\Microsoft.CodeAnalysis.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+    <Reference Include="Microsoft.CodeAnalysis.CSharp">
+      <HintPath>$(RoslynDir)\Microsoft.CodeAnalysis.CSharp.dll</HintPath>
       <Private>true</Private>
     </Reference>
   </ItemGroup>

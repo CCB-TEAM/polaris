@@ -23,7 +23,7 @@ Polaris 是「**自研编译器 + UHT 风格 SDK**」的组合：
 | CDO 改值（原生父类成员：`kredits`/`attack`/`has*`…；改值 / 补差量条目 / Reset） | ✅ |
 | mod `.pak` 导出（v3 / store / mount `../../../kards/Content/`，对真实 mod pak 逐字节验证） | ✅ |
 | 编译器：静态调用 / 实例调用（`EX_Context`）/ `if-else` / `return` / 字面量 | ✅ |
-| 写回既有函数 + 导入解析（其余函数字节不变） | ✅ |\n| **数据注解**：`[PolarisAsset]`/`[PolarisReplace]` 把「目标资产 + 目标函数」放进 mod 源码 | ✅ |
+| 写回既有函数 + 导入解析（其余函数字节不变） | ✅ |\n| `polaris apply`：注解 mod 一条命令写回 + 出 pak | ✅ |\n| **数据注解**：`[PolarisAsset]`/`[PolarisReplace]` 把「目标资产 + 目标函数」放进 mod 源码 | ✅ |
 | 变量读写（赋值 / 变量作实参 / `out`、`ref` 实参） | ✅ |\n| `out`/`ref`/`const` 参数（从纯 jmap 的 CPF flags 推出） | ✅ |\n| 反编译 → 回编译字节一致（真实资产 **302/302 函数**：BP_CardFunctions + 3 张卡） | ✅ |\n| ubergraph 重排、蓝图类基座、BP→C# | 🚧 |
 
 ## 数据流
@@ -110,7 +110,14 @@ public class T70Mod
 ```
 
 ```powershell
+# 方式一：示例程序
 dotnet run --project samples/BytecodeMod -- <Content> <kards.usmap> out
+
+# 方式二：CLI（一条命令，带 pak）
+dotnet run --project src/Polaris.Cli -- apply `
+  --mod samples/BytecodeMod/Mod.cs --content <Content> `
+  --usmap <kards.usmap> --out out `
+  --sdk samples/SdkConsumer/bin/Debug/net10.0/SdkConsumer.dll --pak out/mod.pak
 ```
 
 实测：

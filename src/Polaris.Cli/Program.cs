@@ -1,6 +1,10 @@
+using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
 using Polaris.Assets;
+using Polaris.Compiler;
 using Polaris.Pak;
 using Polaris.SdkGen;
+using UAssetAPI.UnrealTypes;
 
 return Cli.Run(args);
 
@@ -16,6 +20,8 @@ internal static class Cli
           pak          --pak <mod.pak> --file <abs path> [--file ...] [--content-root <dir>] [--mount <point>]
           sdk          --jmap <x.jmap> --out <dir> [--filter kards,Engine]
              （或旧输入：--usmap <usmap> --catalog <functions.json>）
+          apply        --mod <Mod.cs> --content <ContentRoot> --usmap <usmap> --out <dir>
+                       [--sdk <GeneratedSdk.dll>] [--pak <mod.pak>]
 
         global options:
           --work <dir>         工作目录（usmap 副本与字节码校验用），默认 .polaris-work
@@ -36,6 +42,11 @@ internal static class Cli
             if (args[0] == "sdk")
             {
                 return Sdk(Parse(args.Skip(1).ToArray()));
+            }
+
+            if (args[0] == "apply")
+            {
+                return Apply(Parse(args.Skip(1).ToArray()));
             }
 
             if (args[0] == "pak")
@@ -159,6 +170,139 @@ internal static class Cli
         }
 
         return report.Verify.Ok ? 0 : 1;
+    }
+
+    private static int Apply(Options opts)
+    {
+        var modPath = opts.Require("mod");
+        var content = opts.Require("content");
+        var usmap = opts.Require("usmap");
+        var outDir = opts.Require("out");
+        var source = File.ReadAllText(modPath);
+
+        var refs = ((string?)AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES") ?? "")
+            .Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries)
+            .Select(p => (MetadataReference)MetadataReference.CreateFromFile(p))
+            .ToList();
+        refs.Add(MetadataReference.CreateFromFile(typeof(Polaris.Sdk.UObject).Assembly.Location));
+        if (opts.Values.TryGetValue("sdk", out var sdkDll) && File.Exists(sdkDll))
+        {
+            refs.Add(MetadataReference.CreateFromFile(sdkDll));
+        }
+
+        var compilation = CSharpCompilation.Create(
+            "PolarisApply",
+            [CSharpSyntaxTree.ParseText(source, path: modPath)],
+            refs,
+            new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
+
+        var errors = compilation.GetDiagnostics()
+            .Where(d => d.Severity == DiagnosticSeverity.Error)
+            .ToList();
+        if (errors.Count > 0)
+        {
+            foreach (var error in errors)
+            {
+                Console.Error.WriteLine("  " + error);
+            }
+
+            return 1;
+        }
+
+        var targets = ModPlanBuilder.FindTargets(compilation);
+        if (targets.Count == 0)
+        {
+            Console.Error.WriteLine("没有 [PolarisAsset]/[PolarisReplace] 标注");
+            return 1;
+        }
+
+        var replacedTotal = 0;
+        foreach (var group in targets.GroupBy(t => ResolveAsset(content, t.AssetPath)))
+        {
+            var assetPath = group.Key;
+            if (!File.Exists(assetPath))
+            {
+                Console.Error.WriteLine("找不到资产: " + assetPath);
+                return 1;
+            }
+
+            var card = CardAsset.Open(assetPath, usmap, Path.Combine(opts.Work, "_apply"));
+            var before = FunctionBytes.Hashes(card.Asset);
+            var imports = new AssetImportTable(card.Asset);
+            var replaced = new HashSet<string>(StringComparer.Ordinal);
+
+            foreach (var target in group)
+            {
+                var function = card.Asset.Exports.OfType<UAssetAPI.ExportTypes.FunctionExport>()
+                    .FirstOrDefault(f => f.ObjectName.ToString() == target.FunctionName)
+                    ?? throw new InvalidOperationException($"资产里没有函数 {target.FunctionName}");
+                var classExport = card.Asset.Exports.OfType<UAssetAPI.ExportTypes.ClassExport>().First();
+
+                var bytecode = Translator.Compile(
+                    compilation,
+                    target.Method,
+                    card.Asset,
+                    imports,
+                    new FPackageIndex(card.Asset.Exports.IndexOf(function) + 1),
+                    new FPackageIndex(card.Asset.Exports.IndexOf(classExport) + 1));
+
+                var check = BytecodeCheck.Run(bytecode, card.Asset);
+                if (!check.Ok)
+                {
+                    Console.Error.WriteLine($"{target.FunctionName}: " + string.Join("; ", check.Errors));
+                    return 1;
+                }
+
+                FunctionWriter.Replace(card.Asset, target.FunctionName, bytecode);
+                replaced.Add(target.FunctionName);
+                Console.WriteLine($"mod      {Path.GetFileName(assetPath)} :: {target.FunctionName}（{bytecode.Length} 条）");
+            }
+
+            var saved = card.Save(outDir);
+            var reopened = CardAsset.Open(saved.UAssetPath, usmap, Path.Combine(opts.Work, "_apply_verify"));
+            var after = FunctionBytes.Hashes(reopened.Asset);
+            foreach (var (name, hash) in before)
+            {
+                if (!replaced.Contains(name) && after[name] != hash)
+                {
+                    Console.Error.WriteLine("其他函数被改动: " + name);
+                    return 1;
+                }
+            }
+
+            if (opts.Values.TryGetValue("pak", out var pakPath))
+            {
+                var relative = ModPak.RelativeContentPath(assetPath);
+                var built = ModPak.Build(
+                    [
+                        new PakFile(relative, saved.UAsset),
+                        new PakFile(Path.ChangeExtension(relative, ".uexp"), saved.UExp),
+                    ],
+                    pakPath,
+                    opts.Mount);
+                Console.WriteLine($"pak      {built.PakPath}（{built.Bytes.Length} 字节 / {built.Archive.Entries.Count} 条目）");
+            }
+
+            replacedTotal += replaced.Count;
+        }
+
+        Console.WriteLine($"ok       {replacedTotal} 个函数写回");
+        return 0;
+    }
+
+    private static string ResolveAsset(string content, string asset)
+    {
+        if (asset.StartsWith("/Game/", StringComparison.Ordinal))
+        {
+            return Path.Combine(content, asset["/Game/".Length..].Replace('/', Path.DirectorySeparatorChar));
+        }
+
+        if (Path.IsPathRooted(asset))
+        {
+            return asset;
+        }
+
+        return Path.Combine(content, asset.Replace('/', Path.DirectorySeparatorChar));
     }
 
     private static int Sdk(Options opts)
