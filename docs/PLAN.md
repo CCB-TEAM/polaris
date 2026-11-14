@@ -109,7 +109,7 @@
 - `191` 落在 `EX_LocalVirtualFunction`（131 起，长 81）内部；从 191 解析能“碰巧”读出 `EX_ByteConst`，但不是真实语句起点
 - 同一资产的**无改动保存** `.uexp` 与原文件逐字节一致（798367/798367），排除了序列化保真问题
 
-全资产统计（BP_CardFunctions 294 个函数 / 212 个含跳转 / 1599 个跳转目标）：只有 **22 个**目标落在指令起点；同一函数内不同目标到最近起点的偏差也不一致（+20/+9 等），说明不是单一基准常量。\n\n补充（Round 5）：`AddAttackUntilEndOfTurn` 的 `191` 恰好是 `ExecuteUbergraph_BP_CardFunctions`（2035 字节）里的一个指令起点，但该函数自身的 274 字节块**不在** ubergraph 字节里；对 `abs`/`start+off`/`start+1+off`/`start+5+off`/`end-off`/`prevStart+off` 六种公式全量统计都只有 1–2% 命中，基本可排除单一线性基准。\n\nUE 源码 `KismetCompilerVMBackend.cpp::PerformFixups` 写的是**绝对** statement 偏移
+全资产统计（BP_CardFunctions 294 个函数 / 212 个含跳转 / 1599 个跳转目标）：只有 **22 个**目标落在指令起点；同一函数内不同目标到最近起点的偏差也不一致（+20/+9 等），说明不是单一基准常量。\n\n补充（Round 5）：`AddAttackUntilEndOfTurn` 的 `191` 恰好是 `ExecuteUbergraph_BP_CardFunctions`（2035 字节）里的一个指令起点，但该函数自身的 274 字节块**不在** ubergraph 字节里；对 `abs`/`start+off`/`start+1+off`/`start+5+off`/`end-off`/`prevStart+off` 六种公式全量统计都只有 1–2% 命中，基本可排除单一线性基准。\n再按 token 分开：`EX_Jump` 绝对 8 / 相对 2；`EX_JumpIfNot` 绝对 14 / 相对 11 —— 两者都没有稳定基准，说明问题不在“Jump 和 JumpIfNot 用了不同公式”。\n\nUE 源码 `KismetCompilerVMBackend.cpp::PerformFixups` 写的是**绝对** statement 偏移
 （`CommitSkip(OffsetToFix, TargetStatementOffset)`），与实测不一致；怀疑与 ubergraph
 的脚本缓冲区分段/入口表有关。M4 之前需要：
 1. 找到该函数导出在 `.uexp` 中的真实脚本起点（当前按 SerialOffset 开窗没搜到字节块，说明窗定位还不准）；
