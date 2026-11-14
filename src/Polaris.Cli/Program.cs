@@ -23,7 +23,7 @@ internal static class Cli
           apply        --mod <Mod.cs> --content <ContentRoot> --usmap <usmap> --out <dir>
                        [--sdk <GeneratedSdk.dll>] [--pak <mod.pak>]
           check        --asset <uasset> --usmap <usmap>     反编译/回编译往返覆盖率
-          decompile    --asset <uasset> --usmap <usmap> [--function <name>]   可读伪代码
+          decompile    --asset <uasset> --usmap <usmap> [--function <name>] [--strict]   可读伪代码
 
         global options:
           --work <dir>         工作目录（usmap 副本与字节码校验用），默认 .polaris-work
@@ -306,7 +306,9 @@ internal static class Cli
     {
         var card = CardAsset.Open(opts.Require("asset"), opts.Require("usmap"), opts.Work);
         var only = opts.Values.TryGetValue("function", out var name) ? name : null;
+        var strict = opts.Values.ContainsKey("strict");
         var shown = 0;
+        var failed = 0;
 
         foreach (var function in card.Asset.Exports.OfType<UAssetAPI.ExportTypes.FunctionExport>())
         {
@@ -321,7 +323,13 @@ internal static class Cli
             }
 
             var nodes = KismetDecompiler.Decompile(function.ScriptBytecode, card.Asset);
-            Console.WriteLine($"// {function.ObjectName}");
+            var roundtrip = RoundTrip.Verify(function.ScriptBytecode, card.Asset);
+            Console.WriteLine($"// {function.ObjectName}  roundtrip={(roundtrip.Ok ? "ok" : "FAIL: " + roundtrip.Error)}");
+            if (!roundtrip.Ok)
+            {
+                failed++;
+            }
+
             Console.WriteLine(KismetText.Format(nodes, card.Asset));
             Console.WriteLine();
             shown++;
@@ -330,6 +338,12 @@ internal static class Cli
         if (only is not null && shown == 0)
         {
             Console.Error.WriteLine("找不到函数: " + only);
+            return 1;
+        }
+
+        if (strict && failed > 0)
+        {
+            Console.Error.WriteLine($"{failed} 个函数往返不一致");
             return 1;
         }
 
@@ -554,6 +568,12 @@ internal static class Cli
                 }
 
                 (key == "set" ? o.Sets : o.Resets).Add(argv[++i]);
+                continue;
+            }
+
+            if (key == "strict")
+            {
+                o.Values[key] = "1";
                 continue;
             }
 

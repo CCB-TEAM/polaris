@@ -121,7 +121,7 @@
 
 **状态：✅ 已实现**（`card_event_aans.OnPlayedFromHand` 输出 `persist[...]` / `ExecuteUbergraph(10)` / `return;`）
 
-- **签名与契约**：`polaris decompile --asset <uasset> --usmap <usmap> [--function <name>]`；输出每个函数的可读伪代码；指定函数不存在返回 1。
+- **签名与契约**：`polaris decompile --asset <uasset> --usmap <usmap> [--function <name>] [--strict]`；输出每个函数的可读伪代码，并带 `roundtrip=ok/FAIL` 标记；`--strict` 时任一函数往返失败即返回 1；指定函数不存在返回 1。
 - **输入输出**：只读资产；函数名解析走 `StackNode`（导出/导入表），变量名取 `FFieldPath`。
 - **关键分支（伪代码）**：
   ```
