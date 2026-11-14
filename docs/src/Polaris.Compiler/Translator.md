@@ -66,7 +66,15 @@ return;
 - **关键分支（伪代码）**：`flags 含 FUNC_Static ? Final : (本资产导出 ? Virtual : Context)`。
 - **边界与失败**：名字歧义报错列候选；占位参数必须显式给出。
 - **调用者与被调用者**：`Compile` 调用；依赖 `IFunctionResolver`。
-### `EmitCondition(expression: ExpressionSyntax, context: Context): KismetExpression`
+'### `EmitWhile(whileStatement: WhileStatementSyntax, builder: BytecodeBuilder, context: Context): void`
+
+**状态：✅ 已实现**（测试「局部变量声明：写回 + 重开往返」覆盖 `while (n < 3) { n = n + 1; }`）
+
+- **签名与契约**：`start:` → `JumpIfNot(cond) -> end` → body → `Jump start` → `end:`。
+- **边界与失败**：不支持 `break`/`continue`/`do-while`；条件由 `EmitCondition` 生成。
+- **调用者与被调用者**：`EmitStatements` 调用；依赖 `EmitCondition`、`BytecodeBuilder`。
+
+### `EmitCondition(expression: ExpressionSyntax, context: Context): KismetExpression`'
 
 **状态：✅ 已实现**（测试「局部变量声明：写回 + 重开往返」覆盖 `if (x > 1)`）
 

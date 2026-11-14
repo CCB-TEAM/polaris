@@ -104,6 +104,10 @@ public static class Translator
                     EmitIf(ifStatement, builder, context);
                     break;
 
+                case WhileStatementSyntax whileStatement:
+                    EmitWhile(whileStatement, builder, context);
+                    break;
+
                 case LocalDeclarationStatementSyntax local:
                     EmitLocalDeclaration(local, builder, context);
                     break;
@@ -154,6 +158,20 @@ public static class Translator
         EmitStatements(ifStatement.Else.Statement is BlockSyntax elseBlock
             ? elseBlock.Statements
             : [ifStatement.Else.Statement], builder, context);
+        builder.MarkLabel(endLabel);
+    }
+
+    private static void EmitWhile(WhileStatementSyntax whileStatement, BytecodeBuilder builder, Context context)
+    {
+        var startLabel = builder.NewLabel();
+        var endLabel = builder.NewLabel();
+
+        builder.MarkLabel(startLabel);
+        builder.EmitJumpIfNot(EmitCondition(whileStatement.Condition, context), endLabel);
+        EmitStatements(whileStatement.Statement is BlockSyntax block
+            ? block.Statements
+            : [whileStatement.Statement], builder, context);
+        builder.EmitJump(startLabel);
         builder.MarkLabel(endLabel);
     }
 

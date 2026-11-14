@@ -898,6 +898,8 @@ internal static class TestRunner
                         x = x & 3;
                         x = -x;
                         if (b) { x = x + 1; } else { x = x + 2; }
+                        int n = 0;
+                        while (n < 3) { n = n + 1; }
                         KMLX.Abs_Int(x);
                         return;
                     }
@@ -932,7 +934,7 @@ internal static class TestRunner
                 new FPackageIndex(1),
                 function);
 
-            True(function.LoadedProperties.Length == before + 4, $"局部变量属性 {before} -> {function.LoadedProperties.Length}");
+            True(function.LoadedProperties.Length == before + 5, $"局部变量属性 {before} -> {function.LoadedProperties.Length}");
             True(expressions.OfType<EX_Let>().Any(), "含局部变量赋值");
             True(expressions.OfType<EX_Let>().Any(l => l.Expression is EX_CallMath), "含数学调用（x + 2）");
             True(expressions.OfType<EX_JumpIfNot>().Any(j => j.BooleanExpression is EX_CallMath or EX_LocalVariable), "条件（比较或变量）");
@@ -943,7 +945,7 @@ internal static class TestRunner
             var reopened = CardAsset.Open(saved.UAssetPath, env.Usmap, Work(root, "loc-reopen"));
             var target = reopened.Asset.Exports.OfType<UAssetAPI.ExportTypes.FunctionExport>()
                 .First(f => f.ObjectName.ToString() == "OnPlayedFromHand");
-            Equal(before + 4, target.LoadedProperties.Length);
+            Equal(before + 5, target.LoadedProperties.Length);
             var report = RoundTrip.Verify(target.ScriptBytecode!, reopened.Asset);
             True(report.Ok, "重开往返: " + report.Error);
         });
