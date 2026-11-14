@@ -95,6 +95,7 @@ internal static class TestRunner
         NoOpSaveFidelity(env, root);
         OutRefArgument(env, root);
         FloatConstants(env, root);
+        DecompileText(env, root);
         Errors(env, root);
 
         Console.WriteLine();
@@ -845,6 +846,22 @@ internal static class TestRunner
             True(expressions.OfType<EX_FinalFunction>().Last().Parameters[0] is EX_DoubleConst, "double 实参");
             var report = RoundTrip.Verify(expressions, host);
             True(report.Ok, "往返: " + report.Error);
+        });
+    }
+
+    private static void DecompileText(TestContext env, string root)
+    {
+        Case("反编译伪代码：存根可读输出", () =>
+        {
+            var card = CardAsset.Open(env.CardEventAans, env.Usmap, Work(root, "text"));
+            var function = card.Asset.Exports.OfType<UAssetAPI.ExportTypes.FunctionExport>()
+                .First(f => f.ObjectName.ToString() == "OnPlayedFromHand");
+            var text = KismetText.Format(KismetDecompiler.Decompile(function.ScriptBytecode!, card.Asset), card.Asset);
+
+            True(text.Contains("ExecuteUbergraph_card_event_aans(10)"), "调用 + 入口值");
+            True(text.Contains("targetCard"), "参数名");
+            True(text.Contains("persist["), "持久帧写入");
+            Console.WriteLine("      " + text.Replace(Environment.NewLine, " | "));
         });
     }
 

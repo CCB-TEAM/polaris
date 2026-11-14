@@ -23,6 +23,7 @@ internal static class Cli
           apply        --mod <Mod.cs> --content <ContentRoot> --usmap <usmap> --out <dir>
                        [--sdk <GeneratedSdk.dll>] [--pak <mod.pak>]
           check        --asset <uasset> --usmap <usmap>     反编译/回编译往返覆盖率
+          decompile    --asset <uasset> --usmap <usmap> [--function <name>]   可读伪代码
 
         global options:
           --work <dir>         工作目录（usmap 副本与字节码校验用），默认 .polaris-work
@@ -53,6 +54,11 @@ internal static class Cli
             if (args[0] == "check")
             {
                 return Check(Parse(args.Skip(1).ToArray()));
+            }
+
+            if (args[0] == "decompile")
+            {
+                return Decompile(Parse(args.Skip(1).ToArray()));
             }
 
             if (args[0] == "pak")
@@ -293,6 +299,40 @@ internal static class Cli
         }
 
         Console.WriteLine($"ok       {replacedTotal} 个函数写回");
+        return 0;
+    }
+
+    private static int Decompile(Options opts)
+    {
+        var card = CardAsset.Open(opts.Require("asset"), opts.Require("usmap"), opts.Work);
+        var only = opts.Values.TryGetValue("function", out var name) ? name : null;
+        var shown = 0;
+
+        foreach (var function in card.Asset.Exports.OfType<UAssetAPI.ExportTypes.FunctionExport>())
+        {
+            if (function.ScriptBytecode is not { Length: > 0 })
+            {
+                continue;
+            }
+
+            if (only is not null && function.ObjectName.ToString() != only)
+            {
+                continue;
+            }
+
+            var nodes = KismetDecompiler.Decompile(function.ScriptBytecode, card.Asset);
+            Console.WriteLine($"// {function.ObjectName}");
+            Console.WriteLine(KismetText.Format(nodes, card.Asset));
+            Console.WriteLine();
+            shown++;
+        }
+
+        if (only is not null && shown == 0)
+        {
+            Console.Error.WriteLine("找不到函数: " + only);
+            return 1;
+        }
+
         return 0;
     }
 

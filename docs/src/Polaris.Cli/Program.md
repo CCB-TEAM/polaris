@@ -116,3 +116,17 @@
   ```
 - **边界与失败**：资产不存在由 `CardAsset.Open` 抛 `FileNotFoundException`；没有函数时按 100% 处理。
 - **调用者与被调用者**：`polaris check`；调用 `CardAsset`、`RoundTrip`。
+
+### `Decompile(opts: Options): int`
+
+**状态：✅ 已实现**（`card_event_aans.OnPlayedFromHand` 输出 `persist[...]` / `ExecuteUbergraph(10)` / `return;`）
+
+- **签名与契约**：`polaris decompile --asset <uasset> --usmap <usmap> [--function <name>]`；输出每个函数的可读伪代码；指定函数不存在返回 1。
+- **输入输出**：只读资产；函数名解析走 `StackNode`（导出/导入表），变量名取 `FFieldPath`。
+- **关键分支（伪代码）**：
+  ```
+  nodes = KismetDecompiler.Decompile(fn, asset)
+  print "// " + fn.Name; print KismetText.Format(nodes, asset)
+  ```
+- **边界与失败**：跳转/未知指令以注释输出，不还原控制流。
+- **调用者与被调用者**：`polaris decompile`；调用 `CardAsset`、`KismetDecompiler`、`KismetText`。

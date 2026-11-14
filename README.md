@@ -146,7 +146,7 @@ src/Polaris.Pak/        v3 pak 读写（vendored from solstice-pak，MIT）
 src/Polaris.Cli/        polaris cards|pak|sdk
 docs/                   架构、数据流、ADR、逐函数契约
 samples/                CardModDemo（CDO）/ BytecodeMod（字节码）/ SdkConsumer / SdkGenConsumer
-tests/                  Polaris.Tests（20 个用例）
+tests/                  Polaris.Tests（21 个用例）
 ```
 
 ## 限制
