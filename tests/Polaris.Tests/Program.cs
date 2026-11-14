@@ -805,8 +805,6 @@ internal static class TestRunner
         });
     }
 
-    // ---------- 断言 ----------
-
     private static string Work(string root, string name)
     {
         var dir = Path.Combine(root, "work", name);

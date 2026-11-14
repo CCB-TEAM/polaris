@@ -19,7 +19,7 @@
 | `Polaris.SdkGen` | [SdkGenerator](src/Polaris.SdkGen/SdkGenerator.md) · [UsmapReader](src/Polaris.SdkGen/UsmapReader.md) · [JmapReader](src/Polaris.SdkGen/JmapReader.md) · [JmapFileReader](src/Polaris.SdkGen/JmapFileReader.md) · [Json](src/Polaris.SdkGen/Json.md) | ✅ 5 | 纯 jmap（或 usmap+jmap）→ C# SDK |
 | `Polaris.SourceGen` | [SdkSourceGenerator](src/Polaris.SourceGen/SdkSourceGenerator.md) | ✅ 1 | 增量源生成器（编译期生成 SDK） |
 | `Polaris.Sdk` | [Runtime](src/Polaris.Sdk/Runtime.md) | ✅ 1 | 生成代码引用的运行时声明 |
-| `Polaris.Cli` | [Program](src/Polaris.Cli/Program.md) | ✅ 7 · 🚧 1 | `cards/pak/sdk/apply`；`scan/diff` 待做 |
+| `Polaris.Cli` | [Program](src/Polaris.Cli/Program.md) | ✅ 8 · 🚧 1 | `cards/pak/sdk/apply/check`；`scan/diff` 待做 |
 
 构建与验证：`.\run.ps1 build`（Solstice.Kismet → Sdk → SdkGen → SourceGen → Assets → Pak → Cli → Tests）、`.\run.ps1 verify`（19 个用例 + 两个编译闸）。
 
@@ -85,7 +85,8 @@
 | Cli | [`Pak`](src/Polaris.Cli/Program.md#pakopts-options-int) | ✅ | `pak --file ... --pak ...` |
 | Cli | [`Sdk`](src/Polaris.Cli/Program.md#sdkopts-options-int) | ✅ | `sdk --usmap --catalog --out` |
 | Cli | [`Apply`](src/Polaris.Cli/Program.md#applyopts-options-int) | ✅ | 注解 mod → 写回 → pak |
-| Cli | [`ResolveAsset`](src/Polaris.Cli/Program.md#resolveassetcontent-string-asset-string-string) | ✅ | 注解路径 → 磁盘路径 |
+'| Cli | [`ResolveAsset`](src/Polaris.Cli/Program.md#resolveassetcontent-string-asset-string-string) | ✅ | 注解路径 → 磁盘路径 |
+| Cli | [`Check`](src/Polaris.Cli/Program.md#checkopts-options-int) | ✅ | 全函数往返覆盖率 |'
 | Cli | [`Diff`](src/Polaris.Cli/Program.md#diffbefore-string-after-string-diffreport) | 🚧 | 变更报告 |
 
 ## 3. 未实现清单（按影响面排序）

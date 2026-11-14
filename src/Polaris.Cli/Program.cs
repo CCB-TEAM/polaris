@@ -22,6 +22,7 @@ internal static class Cli
              （或旧输入：--usmap <usmap> --catalog <functions.json>）
           apply        --mod <Mod.cs> --content <ContentRoot> --usmap <usmap> --out <dir>
                        [--sdk <GeneratedSdk.dll>] [--pak <mod.pak>]
+          check        --asset <uasset> --usmap <usmap>     反编译/回编译往返覆盖率
 
         global options:
           --work <dir>         工作目录（usmap 副本与字节码校验用），默认 .polaris-work
@@ -47,6 +48,11 @@ internal static class Cli
             if (args[0] == "apply")
             {
                 return Apply(Parse(args.Skip(1).ToArray()));
+            }
+
+            if (args[0] == "check")
+            {
+                return Check(Parse(args.Skip(1).ToArray()));
             }
 
             if (args[0] == "pak")
@@ -288,6 +294,42 @@ internal static class Cli
 
         Console.WriteLine($"ok       {replacedTotal} 个函数写回");
         return 0;
+    }
+
+    private static int Check(Options opts)
+    {
+        var assetPath = opts.Require("asset");
+        var card = CardAsset.Open(assetPath, opts.Require("usmap"), opts.Work);
+        var ok = 0;
+        var total = 0;
+        var failures = new List<string>();
+
+        foreach (var function in card.Asset.Exports.OfType<UAssetAPI.ExportTypes.FunctionExport>())
+        {
+            if (function.ScriptBytecode is not { Length: > 0 })
+            {
+                continue;
+            }
+
+            total++;
+            var report = RoundTrip.Verify(function.ScriptBytecode, card.Asset);
+            if (report.Ok)
+            {
+                ok++;
+            }
+            else
+            {
+                failures.Add($"{function.ObjectName}: {report.Error}");
+            }
+        }
+
+        Console.WriteLine($"roundtrip {ok}/{total}（{(total == 0 ? 100.0 : 100.0 * ok / total):F1}%）");
+        foreach (var failure in failures.Take(10))
+        {
+            Console.WriteLine("  " + failure);
+        }
+
+        return ok == total ? 0 : 1;
     }
 
     private static string ResolveAsset(string content, string asset)

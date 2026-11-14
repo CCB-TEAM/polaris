@@ -101,3 +101,18 @@
 - **关键分支（伪代码）**：`startsWith("/Game/") ? content + rest : IsPathRooted ? asset : content + asset`。
 - **边界与失败**：路径分隔符统一为平台分隔符。
 - **调用者与被调用者**：`Apply` 调用。
+
+### `Check(opts: Options): int`
+
+**状态：✅ 已实现**（`card_event_aans`：2/2 函数，100%）
+
+- **签名与契约**：`polaris check --asset <uasset> --usmap <usmap>`；对资产里每个有字节码的函数跑 `RoundTrip.Verify`；全部一致返回 0，否则 1。
+- **输入输出**：只读资产；打印 `roundtrip ok/total（百分比）`，失败时打印前 10 条（函数名 + 差异偏移/token）。
+- **关键分支（伪代码）**：
+  ```
+  foreach FunctionExport with ScriptBytecode:
+      total++; if RoundTrip.Verify(fn).Ok then ok++ else 记录失败
+  print ok/total; return ok == total ? 0 : 1
+  ```
+- **边界与失败**：资产不存在由 `CardAsset.Open` 抛 `FileNotFoundException`；没有函数时按 100% 处理。
+- **调用者与被调用者**：`polaris check`；调用 `CardAsset`、`RoundTrip`。
