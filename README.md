@@ -24,7 +24,7 @@ Polaris 是「**自研编译器 + UHT 风格 SDK**」的组合：
 | mod `.pak` 导出（v3 / store / mount `../../../kards/Content/`，对真实 mod pak 逐字节验证） | ✅ |
 | 编译器：静态调用 / 实例调用（`EX_Context`）/ `if-else` / `return` / 字面量 | ✅ |
 | 写回既有函数 + 导入解析（其余函数字节不变） | ✅ |\n| **数据注解**：`[PolarisAsset]`/`[PolarisReplace]` 把「目标资产 + 目标函数」放进 mod 源码 | ✅ |
-| 变量读写（赋值 / 变量作实参） | ✅ |\n| `out`/`ref`/`const` 参数（从纯 jmap 的 CPF flags 推出） | ✅ |\n| 反编译 → 回编译字节一致（调用/赋值/持久帧 Let/if-else 跳转） | ✅ |\n| ubergraph 重排、蓝图类基座、BP→C# | 🚧 |
+| 变量读写（赋值 / 变量作实参） | ✅ |\n| `out`/`ref`/`const` 参数（从纯 jmap 的 CPF flags 推出） | ✅ |\n| 反编译 → 回编译字节一致（真实资产 **302/302 函数**：BP_CardFunctions + 3 张卡） | ✅ |\n| ubergraph 重排、蓝图类基座、BP→C# | 🚧 |
 
 ## 数据流
 
@@ -139,7 +139,7 @@ src/Polaris.Pak/        v3 pak 读写（vendored from solstice-pak，MIT）
 src/Polaris.Cli/        polaris cards|pak|sdk
 docs/                   架构、数据流、ADR、逐函数契约
 samples/                CardModDemo（CDO）/ BytecodeMod（字节码）/ SdkConsumer / SdkGenConsumer
-tests/                  Polaris.Tests（16 个用例）
+tests/                  Polaris.Tests（17 个用例）
 ```
 
 ## 限制

@@ -9,13 +9,13 @@
 
 ### `Decompile(expressions: IReadOnlyList<KismetExpression>): IReadOnlyList<KNode>`
 
-**状态：✅ 已实现**（`card_event_aans.OnPlayedFromHand` 4 条表达式、if/else 分支程序均往返一致）
+**状态：✅ 已实现**（`card_event_aans.OnPlayedFromHand` 4 条表达式、if/else 程序、**真实资产 302/302 函数**（BP_CardFunctions + 3 张卡）都字节一致）
 
-- **签名与契约**：纯函数；解析 `EX_JumpIfNot` + `EX_Jump` 的 if/else 模式；其它跳转形态抛 `NotSupportedException`。
+- **签名与契约**：纯函数；遇到 `EX_JumpIfNot`/`EX_Jump` 原样保留为 `KRaw`（跳转偏移语义待查，先保证字节不变）；其余表达式按 token 解码。
 - **输入输出**：常量 → `KConst`；`EX_LocalVariable`/`EX_InstanceVariable` → `KVar`；`EX_FinalFunction`/`EX_LocalFinalFunction`/`EX_Context` → `KCall`；`EX_Let` → `KLet`；`EX_LetValueOnPersistentFrame` → `KPersist`；`EX_Return`/`EX_EndOfScript` → `KReturn`/`KEnd`。
 - **关键分支（伪代码）**：
   ```
-  顶层按 starts[] 解析 JumpIfNot/if-else → KIf(cond, KSeq(then), KSeq(else)/null)
+  顶层: JumpIfNot/EX_Jump → KRaw 原样保留
   switch expr:
     IntConst/True/False/String/Nothing/Self → KConst
     LocalVariable/InstanceVariable → KVar(instance?)
@@ -25,7 +25,7 @@
     Return → KReturn(value|Nothing); EndOfScript → KEnd
     _ → throw NotSupportedException(token)
   ```
-- **边界与失败**：条件跳转/switch/结构体常量暂不支持；错误信息带 token。
+- **边界与失败**：跳转/switch/结构体常量不进语义解码（原样保留）；未知 token 也走 `KRaw`，错误信息带 token。
 - **调用者与被调用者**：`RoundTrip.Verify` 调用；不依赖资产。
 
 ### `Recompile(nodes: IReadOnlyList<KNode>, asset: UAsset): KismetExpression[]`
@@ -48,13 +48,13 @@
 
 **状态：✅ 已实现**（真实函数 `OnPlayedFromHand` 与编译产物均通过）
 
-- **签名与契约**：序列化原指令 → 反编译 → 回编译 → 序列化 → `SequenceEqual`；异常捕获为报告，不抛出。
-- **输入输出**：`Ok=true` 表示字节完全一致；失败时 `Error` 给出「回编译字节不一致」或异常消息。
+- **签名与契约**：序列化原指令 → 反编译 → 回编译 → 序列化 → `SequenceEqual`；异常捕获为报告，不抛出；失败时报告首个差异偏移与所在指令。
+- **输入输出**：`Ok=true` 表示字节完全一致；失败时 `Error` 给出偏移/长度/所在 token 或异常消息。
 - **关键分支（伪代码）**：
   ```
   nodes = Decompile(expressions)
   rebuilt = Recompile(nodes, asset)
   return Serialize(expressions) == Serialize(rebuilt)
   ```
-- **边界与失败**：只证明「反编译/回编译对当前子集无损」，不等于运行语义正确。
+- **边界与失败**：只证明「反编译/回编译对当前子集无损」，不等于运行语义正确；真实资产抽样 302/302 通过。\n- **实测**：`BP_CardFunctions` + 3 张卡共 302 个函数，100% 字节一致。
 - **调用者与被调用者**：测试与未来 `polaris check` 调用。

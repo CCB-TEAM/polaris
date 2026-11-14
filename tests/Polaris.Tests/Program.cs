@@ -91,6 +91,7 @@ internal static class TestRunner
         VariablesAndRoundTrip(env, root);
         RealFunctionRoundTrip(env, root);
         RoundTripIf(env, root);
+        RoundTripCoverage(env, root);
         Errors(env, root);
 
         Console.WriteLine();
@@ -655,6 +656,56 @@ internal static class TestRunner
             True(expressions.Any(e => e.Token == EExprToken.EX_JumpIfNot), "含条件跳转");
             var report = RoundTrip.Verify(expressions, host);
             True(report.Ok, "往返: " + report.Error);
+        });
+    }
+
+    private static void RoundTripCoverage(TestContext env, string root)
+    {
+        Case("真实资产全函数往返覆盖率", () =>
+        {
+            var assets = new[]
+            {
+                Path.Combine(env.Root, "Cards", "BP_CardFunctions.uasset"),
+                Path.Combine(env.Root, "Cards", "Soviet", "Allegiance", "units", "card_unit_t_70eot.uasset"),
+                env.CardEventAans,
+                env.CardUnit,
+            };
+
+            var ok = 0;
+            var total = 0;
+            var failures = new List<string>();
+            foreach (var path in assets.Where(File.Exists))
+            {
+                var card = CardAsset.Open(path, env.Usmap, Work(root, "cov-" + Path.GetFileNameWithoutExtension(path)));
+                foreach (var function in card.Asset.Exports.OfType<UAssetAPI.ExportTypes.FunctionExport>())
+                {
+                    if (function.ScriptBytecode is not { Length: > 0 })
+                    {
+                        continue;
+                    }
+
+                    total++;
+                    var report = RoundTrip.Verify(function.ScriptBytecode, card.Asset);
+                    if (report.Ok)
+                    {
+                        ok++;
+                    }
+                    else
+                    {
+                        failures.Add($"{Path.GetFileNameWithoutExtension(path)}.{function.ObjectName}: {report.Error}");
+                    }
+                }
+            }
+
+            True(total > 0, "有可测函数");
+
+            Console.WriteLine($"      {ok}/{total} 函数往返一致（{100.0 * ok / total:F1}%）");
+            foreach (var failure in failures.Take(5))
+            {
+                Console.WriteLine("      " + failure);
+            }
+
+            True(ok * 100 >= total * 95, $"覆盖率不足: {ok}/{total}");
         });
     }
 

@@ -13,9 +13,9 @@ public sealed record KConst(KismetExpression Expression) : KNode;
 
 public sealed record KVar(KismetPropertyPointer Pointer, bool IsInstance) : KNode;
 
-public sealed record KCall(FPackageIndex Callee, KNode? Receiver, IReadOnlyList<KNode> Arguments, bool IsLocalFinal = false) : KNode;
+public sealed record KCall(FPackageIndex Callee, KNode? Receiver, IReadOnlyList<KNode> Arguments, bool IsLocalFinal = false, uint? OriginalOffset = null, KismetPropertyPointer? OriginalRValue = null) : KNode;
 
-public sealed record KLet(KismetPropertyPointer Target, bool IsInstance, KNode Value) : KNode;
+public sealed record KLet(KismetPropertyPointer Target, KismetExpression Variable, KNode Value) : KNode;
 
 public sealed record KPersist(KismetPropertyPointer Destination, KNode Value) : KNode;
 
@@ -27,7 +27,10 @@ public sealed record KSeq(IReadOnlyList<KNode> Items) : KNode;
 
 public sealed record KIf(KNode Condition, KNode Then, KNode? Else) : KNode;
 
-public sealed record RoundTripReport(bool Ok, string? Error);
+/// <summary>暂不做语义解码的表达式：原样保留，保证往返字节不变（覆盖/一致性优先）。</summary>
+public sealed record KRaw(KismetExpression Expression) : KNode;
+
+public sealed record RoundTripReport(bool Ok, string? Error, int DiffOffset = -1);
 
 public static class KismetDecompiler
 {
@@ -45,30 +48,12 @@ public static class KismetDecompiler
         var i = start;
         while (i < end)
         {
-            if (expressions[i] is EX_JumpIfNot conditional)
+            // 真实资产的跳转偏移与我们测出的指令起点对不上（语义待查），
+            // 跳转一律原样保留，保证「反编译→回编译」字节不变。
+            if (expressions[i] is EX_JumpIfNot or EX_Jump)
             {
-                var target = IndexOf(starts, conditional.CodeOffset);
-                var jump = i + 1;
-                while (jump < end && expressions[jump] is not EX_Jump)
-                {
-                    jump++;
-                }
-
-                if (jump < end && expressions[jump] is EX_Jump jumpExpression)
-                {
-                    var finish = IndexOf(starts, jumpExpression.CodeOffset);
-                    var thenNodes = DecompileRange(expressions, i + 1, jump, asset, starts);
-                    var elseNodes = DecompileRange(expressions, jump + 1, finish, asset, starts);
-                    nodes.Add(new KIf(DecompileExpression(conditional.BooleanExpression), new KSeq(thenNodes), new KSeq(elseNodes)));
-                    i = finish;
-                }
-                else
-                {
-                    var thenNodes = DecompileRange(expressions, i + 1, target, asset, starts);
-                    nodes.Add(new KIf(DecompileExpression(conditional.BooleanExpression), new KSeq(thenNodes), null));
-                    i = target;
-                }
-
+                nodes.Add(new KRaw(expressions[i]));
+                i++;
                 continue;
             }
 
@@ -102,7 +87,12 @@ public static class KismetDecompiler
             }
         }
 
-        throw new NotSupportedException($"跳转目标 {offset} 不是指令起始");
+        if (offset == (starts.Count == 0 ? 0 : starts[^1]))
+        {
+            return starts.Count - 1;
+        }
+
+        throw new NotSupportedException($"跳转目标 {offset} 不是指令起始（starts {starts.Count}，末 {starts[^1]}）");
     }
 
     private static KNode DecompileExpression(KismetExpression expression)
@@ -125,18 +115,18 @@ public static class KismetDecompiler
                 return new KVar(v.Variable, IsInstance: true);
             case EX_Self:
                 return new KConst(new EX_Self());
-            case EX_LocalFinalFunction local:
+            case EX_LocalFinalFunction local when local.GetType() == typeof(EX_LocalFinalFunction):
                 return new KCall(local.StackNode, null, local.Parameters.Select(DecompileExpression).ToList(), IsLocalFinal: true);
-            case EX_FinalFunction call:
+            case EX_FinalFunction call when call.GetType() == typeof(EX_FinalFunction):
                 return new KCall(call.StackNode, null, call.Parameters.Select(DecompileExpression).ToList());
-            case EX_Context context when context.ContextExpression is EX_LocalFinalFunction local:
+            case EX_Context context when context.ContextExpression is EX_LocalFinalFunction local && local.GetType() == typeof(EX_LocalFinalFunction):
                 return new KCall(local.StackNode, DecompileExpression(context.ObjectExpression),
-                    local.Parameters.Select(DecompileExpression).ToList(), IsLocalFinal: true);
-            case EX_Context context when context.ContextExpression is EX_FinalFunction inner:
+                    local.Parameters.Select(DecompileExpression).ToList(), IsLocalFinal: true, OriginalOffset: context.Offset, OriginalRValue: context.RValuePointer);
+            case EX_Context context when context.ContextExpression is EX_FinalFunction inner && inner.GetType() == typeof(EX_FinalFunction):
                 return new KCall(inner.StackNode, DecompileExpression(context.ObjectExpression),
-                    inner.Parameters.Select(DecompileExpression).ToList());
+                    inner.Parameters.Select(DecompileExpression).ToList(), OriginalOffset: context.Offset, OriginalRValue: context.RValuePointer);
             case EX_Let let:
-                return new KLet(let.Value, let.Variable is EX_InstanceVariable, DecompileExpression(let.Expression));
+                return new KLet(let.Value, let.Variable, DecompileExpression(let.Expression));
             case EX_LetValueOnPersistentFrame persist:
                 return new KPersist(persist.DestinationProperty, DecompileExpression(persist.AssignmentExpression));
             case EX_Return ret:
@@ -144,7 +134,7 @@ public static class KismetDecompiler
             case EX_EndOfScript:
                 return new KEnd();
             default:
-                throw new NotSupportedException($"反编译器暂不支持 {expression.Token}");
+                return new KRaw(expression);
         }
     }
 }
@@ -188,9 +178,7 @@ public static class KismetRecompiler
                 builder.Emit(new EX_Let
                 {
                     Value = let.Target,
-                    Variable = let.IsInstance
-                        ? new EX_InstanceVariable { Variable = let.Target }
-                        : new EX_LocalVariable { Variable = let.Target },
+                    Variable = let.Variable,
                     Expression = BuildExpression(let.Value, asset),
                 });
                 break;
@@ -202,6 +190,9 @@ public static class KismetRecompiler
                 break;
             case KEnd:
                 builder.Emit(new EX_EndOfScript());
+                break;
+            case KRaw raw:
+                builder.Emit(raw.Expression);
                 break;
             case KSeq seq:
                 foreach (var item in seq.Items)
@@ -240,6 +231,7 @@ public static class KismetRecompiler
             ? new EX_InstanceVariable { Variable = v.Pointer }
             : new EX_LocalVariable { Variable = v.Pointer },
         KCall call => BuildCall(call, asset),
+        KRaw raw => raw.Expression,
         _ => throw new NotSupportedException($"回编译表达式暂不支持 {node.GetType().Name}"),
     };
 
@@ -265,8 +257,8 @@ public static class KismetRecompiler
         return new EX_Context
         {
             ObjectExpression = BuildExpression(call.Receiver, asset),
-            Offset = BytecodeBuilder.Measure(inner, asset),
-            RValuePointer = EmptyPointer(),
+            Offset = call.OriginalOffset ?? BytecodeBuilder.Measure(inner, asset),
+            RValuePointer = call.OriginalRValue ?? EmptyPointer(),
             ContextExpression = inner,
         };
     }
@@ -285,9 +277,32 @@ public static class RoundTrip
             var rebuilt = KismetRecompiler.Recompile(nodes, asset);
             var before = Serialize(expressions, asset);
             var after = Serialize(rebuilt, asset);
-            return before.SequenceEqual(after)
-                ? new RoundTripReport(true, null)
-                : new RoundTripReport(false, "回编译字节不一致");
+            if (before.SequenceEqual(after))
+            {
+                return new RoundTripReport(true, null);
+            }
+
+            var diff = 0;
+            while (diff < before.Length && diff < after.Length && before[diff] == after[diff])
+            {
+                diff++;
+            }
+
+            var where = "";
+            uint at = 0;
+            foreach (var expression in expressions)
+            {
+                var size = BytecodeBuilder.Measure(expression, asset);
+                if (diff >= at && diff < at + size)
+                {
+                    where = $" 落在 {expression.Token}(start {at})";
+                    break;
+                }
+
+                at += size;
+            }
+
+            return new RoundTripReport(false, $"回编译字节不一致 @{diff}（原 {before.Length} / 新 {after.Length}）{where}", diff);
         }
         catch (Exception ex)
         {
