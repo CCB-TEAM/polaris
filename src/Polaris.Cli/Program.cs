@@ -314,6 +314,33 @@ internal static class Cli
                     }
                 }
 
+                var hasReturnParm = function.LoadedProperties.Any(p =>
+                    (p.PropertyFlags & UAssetAPI.UnrealTypes.EPropertyFlags.CPF_ReturnParm) != 0);
+                if (hasReturnParm && target.Method.ReturnsVoid)
+                {
+                    Console.Error.WriteLine($"{target.FunctionName}: 目标函数有返回值，mod 方法必须返回同类型值");
+                    return 1;
+                }
+
+                if (!hasReturnParm && !target.Method.ReturnsVoid)
+                {
+                    Console.Error.WriteLine($"{target.FunctionName}: 目标函数没有返回值，mod 方法应返回 void");
+                    return 1;
+                }
+
+                var outParams = function.LoadedProperties
+                    .Where(p => (p.PropertyFlags & UAssetAPI.UnrealTypes.EPropertyFlags.CPF_OutParm) != 0)
+                    .Select(p => p.Name.ToString())
+                    .ToHashSet(StringComparer.Ordinal);
+                foreach (var outParam in outParams)
+                {
+                    if (!target.Method.Parameters.Any(p => p.Name == outParam))
+                    {
+                        Console.Error.WriteLine($"{target.FunctionName}: 目标函数有 out 参数 {outParam}，mod 方法必须声明同名参数");
+                        return 1;
+                    }
+                }
+
                 var bytecode = Translator.Compile(
                     compilation,
                     target.Method,
