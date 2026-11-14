@@ -35,22 +35,46 @@ public sealed record RoundTripReport(bool Ok, string? Error, int DiffOffset = -1
 public static class KismetDecompiler
 {
     public static IReadOnlyList<KNode> Decompile(IReadOnlyList<KismetExpression> expressions, UAsset asset)
-        => DecompileRange(expressions, 0, expressions.Count, asset, Starts(expressions, asset));
+        => Decompile(expressions, asset, out _);
+
+    public static IReadOnlyList<KNode> Decompile(
+        IReadOnlyList<KismetExpression> expressions,
+        UAsset asset,
+        out bool decodedControlFlow)
+    {
+        var decoded = false;
+        var nodes = DecompileRange(expressions, 0, expressions.Count, asset, Starts(expressions, asset), ref decoded);
+        decodedControlFlow = decoded;
+        return nodes;
+    }
 
     private static IReadOnlyList<KNode> DecompileRange(
         IReadOnlyList<KismetExpression> expressions,
         int start,
         int end,
         UAsset asset,
-        IReadOnlyList<uint> starts)
+        IReadOnlyList<uint> starts,
+        ref bool decoded)
     {
         var nodes = new List<KNode>();
         var i = start;
         while (i < end)
         {
-            // 真实资产的跳转偏移与我们测出的指令起点对不上（语义待查），
-            // 跳转一律原样保留，保证「反编译→回编译」字节不变。
-            if (expressions[i] is EX_JumpIfNot or EX_Jump)
+            if (expressions[i] is EX_JumpIfNot conditional)
+            {
+                if (TryDecodeIf(expressions, i, end, asset, starts, ref decoded, out var node, out var next))
+                {
+                    nodes.Add(node!);
+                    i = next;
+                    continue;
+                }
+
+                nodes.Add(new KRaw(expressions[i]));
+                i++;
+                continue;
+            }
+
+            if (expressions[i] is EX_Jump)
             {
                 nodes.Add(new KRaw(expressions[i]));
                 i++;
@@ -62,6 +86,78 @@ public static class KismetDecompiler
         }
 
         return nodes;
+    }
+
+    private static bool TryDecodeIf(
+        IReadOnlyList<KismetExpression> expressions,
+        int index,
+        int end,
+        UAsset asset,
+        IReadOnlyList<uint> starts,
+        ref bool decoded,
+        out KNode? node,
+        out int next)
+    {
+        node = null;
+        next = index + 1;
+        var conditional = (EX_JumpIfNot)expressions[index];
+
+        int target;
+        try
+        {
+            target = IndexOf(starts, conditional.CodeOffset);
+        }
+        catch (NotSupportedException)
+        {
+            return false;
+        }
+
+        if (target <= index + 1)
+        {
+            return false;
+        }
+
+        var jump = index + 1;
+        while (jump < end && expressions[jump] is not EX_Jump)
+        {
+            jump++;
+        }
+
+        if (jump < end && expressions[jump] is EX_Jump jumpExpression)
+        {
+            int finish;
+            try
+            {
+                finish = IndexOf(starts, jumpExpression.CodeOffset);
+            }
+            catch (NotSupportedException)
+            {
+                return false;
+            }
+
+            if (finish <= jump + 1 || finish > end)
+            {
+                return false;
+            }
+
+            var thenNodes = DecompileRange(expressions, index + 1, jump, asset, starts, ref decoded);
+            var elseNodes = DecompileRange(expressions, jump + 1, finish, asset, starts, ref decoded);
+            node = new KIf(DecompileExpression(conditional.BooleanExpression), new KSeq(thenNodes), new KSeq(elseNodes));
+            next = finish;
+            decoded = true;
+            return true;
+        }
+
+        if (target <= index + 1)
+        {
+            return false;
+        }
+
+        var thenOnly = DecompileRange(expressions, index + 1, target, asset, starts, ref decoded);
+        node = new KIf(DecompileExpression(conditional.BooleanExpression), new KSeq(thenOnly), null);
+        next = target;
+        decoded = true;
+        return true;
     }
 
     private static IReadOnlyList<uint> Starts(IReadOnlyList<KismetExpression> expressions, UAsset asset)

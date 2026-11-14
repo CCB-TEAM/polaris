@@ -11,7 +11,7 @@
 
 **状态：✅ 已实现**（`card_event_aans.OnPlayedFromHand` 4 条表达式、if/else 程序、**真实资产 302/302 函数**（BP_CardFunctions + 3 张卡）都字节一致）
 
-- **签名与契约**：纯函数；遇到 `EX_JumpIfNot`/`EX_Jump` 原样保留为 `KRaw`（跳转偏移语义待查，先保证字节不变）；其余表达式按 token 解码。
+- **签名与契约**：纯函数；`EX_JumpIfNot` 的跳转目标若落在指令起点，则还原成 `KIf`（`decodedControlFlow=true`）；目标对不上（真实资产）时原样保留为 `KRaw`（`decodedControlFlow=false`）；`EX_Jump` 单独出现时保留 raw。
 - **输入输出**：常量 → `KConst`；`EX_LocalVariable`/`EX_InstanceVariable` → `KVar`；`EX_FinalFunction`/`EX_LocalFinalFunction`/`EX_Context` → `KCall`；`EX_Let` → `KLet`；`EX_LetValueOnPersistentFrame` → `KPersist`；`EX_Return`/`EX_EndOfScript` → `KReturn`/`KEnd`。
 - **关键分支（伪代码）**：
   ```
