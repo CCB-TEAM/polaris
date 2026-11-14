@@ -164,6 +164,10 @@ tests/                  Polaris.Tests（23 个用例）
 - 运行期行为**未在游戏内验证**（静态闸全绿不等于运行正确）。
 - 不新增资产（不做新卡）；不做可视化编辑器。
 
+## 运行期验证
+
+G1（游戏内）验证包与步骤：[docs/verification/g1-card-unit-t70eot.md](docs/verification/g1-card-unit-t70eot.md)（`kredits` 0 + 打出攻击 +5，pak 在 `..\.tmp\polaris\g1`）。
+
 ## 文档
 
 - [docs/INDEX.md](docs/INDEX.md)：模块 / 函数看板 / 未实现清单
