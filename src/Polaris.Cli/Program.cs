@@ -23,7 +23,7 @@ internal static class Cli
           apply        --mod <Mod.cs> --content <ContentRoot> --usmap <usmap> --out <dir>
                        [--sdk <GeneratedSdk.dll>] [--pak <mod.pak>]
           check        --asset <uasset> --usmap <usmap>     反编译/回编译往返覆盖率
-          decompile    --asset <uasset> --usmap <usmap> [--function <name>] [--strict] [--out <file>]   可读伪代码
+          decompile    --asset <uasset> | --dir <目录> --usmap <usmap> [--function <name>] [--strict] [--out <file|dir>]
 
         global options:
           --work <dir>         工作目录（usmap 副本与字节码校验用），默认 .polaris-work
@@ -304,14 +304,82 @@ internal static class Cli
 
     private static int Decompile(Options opts)
     {
-        var card = CardAsset.Open(opts.Require("asset"), opts.Require("usmap"), opts.Work);
+        var usmap = opts.Require("usmap");
         var only = opts.Values.TryGetValue("function", out var name) ? name : null;
         var strict = opts.Values.ContainsKey("strict");
-        var outputFile = opts.Values.TryGetValue("out", out var file) ? file : null;
+
+        if (opts.Values.TryGetValue("dir", out var sourceDir))
+        {
+            var outDir = opts.Values.TryGetValue("out", out var dir) ? dir : Path.Combine(opts.Work, "decompiled");
+            Directory.CreateDirectory(outDir);
+            var assets = 0;
+            var failed = 0;
+            foreach (var path in Directory.EnumerateFiles(sourceDir, "*.uasset", SearchOption.AllDirectories))
+            {
+                CardAsset assetCard;
+                try
+                {
+                    assetCard = CardAsset.Open(path, usmap, opts.Work);
+                }
+                catch (Exception)
+                {
+                    continue;
+                }
+
+                var (text, _, bad) = DecompileAsset(assetCard, only);
+                if (bad > 0)
+                {
+                    failed += bad;
+                }
+
+                var relative = Path.GetRelativePath(sourceDir, path);
+                var flat = relative.Replace(Path.DirectorySeparatorChar, '_').Replace(Path.AltDirectorySeparatorChar, '_');
+                File.WriteAllText(Path.Combine(outDir, flat + ".txt"), text);
+                assets++;
+            }
+
+            Console.WriteLine($"out      {outDir}（{assets} 个资产，{failed} 个函数往返失败）");
+            return strict && failed > 0 ? 1 : 0;
+        }
+
+        var card = CardAsset.Open(opts.Require("asset"), usmap, opts.Work);
+        var (body, shown, failures) = DecompileAsset(card, only);
+        if (only is not null && shown == 0)
+        {
+            Console.Error.WriteLine("找不到函数: " + only);
+            return 1;
+        }
+
+        if (strict && failures > 0)
+        {
+            Console.Error.WriteLine($"{failures} 个函数往返不一致");
+            return 1;
+        }
+
+        if (opts.Values.TryGetValue("out", out var file))
+        {
+            var fileDir = Path.GetDirectoryName(Path.GetFullPath(file));
+            if (!string.IsNullOrEmpty(fileDir))
+            {
+                Directory.CreateDirectory(fileDir);
+            }
+
+            File.WriteAllText(file, body);
+            Console.WriteLine($"out      {file}（{shown} 个函数）");
+        }
+        else
+        {
+            Console.Write(body);
+        }
+
+        return 0;
+    }
+
+    private static (string Text, int Shown, int Failed) DecompileAsset(CardAsset card, string? only)
+    {
+        var text = new System.Text.StringBuilder();
         var shown = 0;
         var failed = 0;
-        var text = new System.Text.StringBuilder();
-
         foreach (var function in card.Asset.Exports.OfType<UAssetAPI.ExportTypes.FunctionExport>())
         {
             if (function.ScriptBytecode is not { Length: > 0 })
@@ -337,35 +405,7 @@ internal static class Cli
             shown++;
         }
 
-        if (only is not null && shown == 0)
-        {
-            Console.Error.WriteLine("找不到函数: " + only);
-            return 1;
-        }
-
-        if (strict && failed > 0)
-        {
-            Console.Error.WriteLine($"{failed} 个函数往返不一致");
-            return 1;
-        }
-
-        if (outputFile is null)
-        {
-            Console.Write(text.ToString());
-        }
-        else
-        {
-            var dir = Path.GetDirectoryName(Path.GetFullPath(outputFile));
-            if (!string.IsNullOrEmpty(dir))
-            {
-                Directory.CreateDirectory(dir);
-            }
-
-            File.WriteAllText(outputFile, text.ToString());
-            Console.WriteLine($"out      {outputFile}（{shown} 个函数）");
-        }
-
-        return 0;
+        return (text.ToString(), shown, failed);
     }
 
     private static int Check(Options opts)
