@@ -13,7 +13,7 @@ public sealed record KConst(KismetExpression Expression) : KNode;
 
 public sealed record KVar(KismetPropertyPointer Pointer, bool IsInstance) : KNode;
 
-public sealed record KCall(FPackageIndex Callee, KNode? Receiver, IReadOnlyList<KNode> Arguments, bool IsLocalFinal = false, uint? OriginalOffset = null, KismetPropertyPointer? OriginalRValue = null) : KNode;
+public sealed record KCall(FPackageIndex Callee, KNode? Receiver, IReadOnlyList<KNode> Arguments, bool IsLocalFinal = false, uint? OriginalOffset = null, KismetPropertyPointer? OriginalRValue = null, bool IsCallMath = false) : KNode;
 
 public sealed record KLet(KismetPropertyPointer Target, KismetExpression Variable, KNode Value) : KNode;
 
@@ -223,6 +223,8 @@ public static class KismetDecompiler
                 return new KVar(v.Variable, IsInstance: true);
             case EX_Self:
                 return new KConst(new EX_Self());
+            case EX_CallMath callMath:
+                return new KCall(callMath.StackNode, null, callMath.Parameters.Select(DecompileExpression).ToList(), IsCallMath: true);
             case EX_LocalFinalFunction local when local.GetType() == typeof(EX_LocalFinalFunction):
                 return new KCall(local.StackNode, null, local.Parameters.Select(DecompileExpression).ToList(), IsLocalFinal: true);
             case EX_FinalFunction call when call.GetType() == typeof(EX_FinalFunction):
@@ -345,7 +347,13 @@ public static class KismetRecompiler
 
     private static KismetExpression BuildCall(KCall call, UAsset asset)
     {
-        EX_FinalFunction inner = call.IsLocalFinal
+        EX_FinalFunction inner = call.IsCallMath
+            ? new EX_CallMath
+            {
+                StackNode = call.Callee,
+                Parameters = call.Arguments.Select(a => BuildExpression(a, asset)).ToArray(),
+            }
+            : call.IsLocalFinal
             ? new EX_LocalFinalFunction
             {
                 StackNode = call.Callee,

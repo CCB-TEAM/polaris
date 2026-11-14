@@ -884,6 +884,7 @@ internal static class TestRunner
                     public static void Run()
                     {
                         int x = 1;
+                        x = x + 2;
                         KMLX.Abs_Int(x);
                         return;
                     }
@@ -920,6 +921,7 @@ internal static class TestRunner
 
             True(function.LoadedProperties.Length == before + 1, "函数多了一个局部变量属性");
             True(expressions.OfType<EX_Let>().Any(), "含局部变量赋值");
+            True(expressions.OfType<EX_Let>().Any(l => l.Expression is EX_CallMath), "含数学调用（x + 2）");
             True(BytecodeCheck.Run(expressions, card.Asset).Ok, "字节码自校验");
 
             FunctionWriter.Replace(card.Asset, "OnPlayedFromHand", expressions);

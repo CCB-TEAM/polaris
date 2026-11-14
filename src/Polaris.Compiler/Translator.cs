@@ -169,6 +169,37 @@ public static class Translator
         throw new CompileException($"if 条件暂只支持 true/false 字面量: {expression}", expression);
     }
 
+    private static KismetExpression EmitBinary(BinaryExpressionSyntax binary, Context context)
+    {
+        var op = binary.Kind() switch
+        {
+            SyntaxKind.AddExpression => "Add",
+            SyntaxKind.SubtractExpression => "Subtract",
+            SyntaxKind.MultiplyExpression => "Multiply",
+            SyntaxKind.DivideExpression => "Divide",
+            _ => throw new CompileException($"暂不支持的运算符 {binary.OperatorToken.Text}", binary),
+        };
+
+        var operandType = context.Model.GetTypeInfo(binary.Left).Type;
+        var functionName = operandType?.SpecialType switch
+        {
+            SpecialType.System_Int32 => op + "_IntInt",
+            SpecialType.System_Single => op + "_FloatFloat",
+            SpecialType.System_Double => op + "_DoubleDouble",
+            _ => throw new CompileException($"暂不支持的运算数类型 {operandType}", binary),
+        };
+
+        return new EX_CallMath
+        {
+            StackNode = context.Resolver.Resolve("/Script/Engine.KismetMathLibrary", functionName),
+            Parameters =
+            [
+                EmitExpression(binary.Left, context),
+                EmitExpression(binary.Right, context),
+            ],
+        };
+    }
+
     private static KismetExpression EmitCall(InvocationExpressionSyntax invocation, Context context)
     {
         var symbol = context.Model.GetSymbolInfo(invocation).Symbol as IMethodSymbol
@@ -334,6 +365,11 @@ public static class Translator
         if (expression is InvocationExpressionSyntax invocation)
         {
             return EmitCall(invocation, context);
+        }
+
+        if (expression is BinaryExpressionSyntax binary)
+        {
+            return EmitBinary(binary, context);
         }
 
         return EmitReceiver(expression, context);

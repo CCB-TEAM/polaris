@@ -66,3 +66,17 @@ return;
 - **关键分支（伪代码）**：`flags 含 FUNC_Static ? Final : (本资产导出 ? Virtual : Context)`。
 - **边界与失败**：名字歧义报错列候选；占位参数必须显式给出。
 - **调用者与被调用者**：`Compile` 调用；依赖 `IFunctionResolver`。
+### `EmitBinary(binary: BinaryExpressionSyntax, context: Context): KismetExpression`
+
+**状态：✅ 已实现**（测试「局部变量声明：写回 + 重开往返」覆盖 `x = x + 2`）
+
+- **签名与契约**：`+ - * /` → `EX_CallMath` 调 `KismetMathLibrary` 的 `Add_IntInt`/`Subtract_IntInt`/`Multiply_IntInt`/`Divide_IntInt`（float 用 `_FloatFloat`，double 用 `_DoubleDouble`）。
+- **输入输出**：运算数递归走 `EmitExpression`；类型从 Roslyn 语义模型取。
+- **关键分支（伪代码）**：
+  ```
+  op = kind → Add/Subtract/Multiply/Divide（其它抛 CompileException）
+  类型 = GetTypeInfo(left).Type → Int32/Float/Double
+  return EX_CallMath { StackNode = resolver(KismetMathLibrary, op+"_"+类型后缀), Parameters=[left,right] }
+  ```
+- **边界与失败**：不支持取模/位运算/字符串拼接；运算数类型不是数值时抛 `CompileException`。
+- **调用者与被调用者**：`EmitExpression` 调用；依赖 `IFunctionResolver`。
