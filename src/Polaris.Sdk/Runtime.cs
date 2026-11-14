@@ -92,6 +92,20 @@ public sealed class UPropertyAttribute(ulong flags) : Attribute
     public ulong Flags { get; } = flags;
 }
 
+/// <summary>Polaris mod 注解：目标资产（相对 Content 或绝对路径）。</summary>
+[AttributeUsage(AttributeTargets.Class, Inherited = false)]
+public sealed class PolarisAssetAttribute(string path) : Attribute
+{
+    public string Path { get; } = path;
+}
+
+/// <summary>Polaris mod 注解：这个方法要替换的目标 UFunction 名。</summary>
+[AttributeUsage(AttributeTargets.Method, Inherited = false)]
+public sealed class PolarisReplaceAttribute(string function) : Attribute
+{
+    public string Function { get; } = function;
+}
+
 /// <summary>UHT: <c>UFUNCTION(...)</c>；保留原始 flags 字符串。</summary>
 [AttributeUsage(AttributeTargets.Method, Inherited = false)]
 public sealed class UFunctionAttribute(string flags) : Attribute

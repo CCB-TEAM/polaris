@@ -23,7 +23,7 @@ Polaris 是「**自研编译器 + UHT 风格 SDK**」的组合：
 | CDO 改值（原生父类成员：`kredits`/`attack`/`has*`…；改值 / 补差量条目 / Reset） | ✅ |
 | mod `.pak` 导出（v3 / store / mount `../../../kards/Content/`，对真实 mod pak 逐字节验证） | ✅ |
 | 编译器：静态调用 / 实例调用（`EX_Context`）/ `if-else` / `return` / 字面量 | ✅ |
-| 写回既有函数 + 导入解析（其余函数字节不变） | ✅ |
+| 写回既有函数 + 导入解析（其余函数字节不变） | ✅ |\n| **数据注解**：`[PolarisAsset]`/`[PolarisReplace]` 把「目标资产 + 目标函数」放进 mod 源码 | ✅ |
 | 变量读写、ubergraph 重排、蓝图类基座、BP→C# | 🚧 |
 
 ## 数据流
@@ -49,7 +49,7 @@ usmap + functions.json ──► UsmapReader/JmapReader ──► SdkEmitter ─
 # 构建（.NET 10；离线环境依赖仓库外的 NuGet 缓存，见 docs/PLAN.md §8）
 .\run.ps1 build
 
-# 测试：12 个用例 + 两道编译闸（全量 SDK 编译、源生成器编译）
+# 测试：13 个用例 + 两道编译闸（全量 SDK 编译、源生成器编译）
 .\run.ps1 verify
 
 # 生成 SDK 到 ..\.tmp\polaris\sdk-all
@@ -90,15 +90,17 @@ pak      mod.pak（7615 字节 / 2 条目）
 
 ### 2) 改事件逻辑（字节码）——`samples/BytecodeMod`
 
-`samples/BytecodeMod/Mod.cs`（人写的 mod，**不是**本项目的编译源码）：
+`samples/BytecodeMod/Mod.cs`（人写的 mod，**不是**本项目的编译源码）——目标资产/函数用**注解**集中声明：
 
 ```csharp
 using Polaris.Sdk;
 using Polaris.Sdk.Kards;
 
-public class AansMod
+[PolarisAsset("Blueprints/Cards/Soviet/Allegiance/units/card_unit_t_70eot.uasset")]
+public class T70Mod
 {
     // 参数名必须与 UFunction 的参数名一致（OnPlayedFromHand 的 targetCard）
+    [PolarisReplace("OnPlayedFromHand")]
     public void OnPlayed(BaseCardObject targetCard)
     {
         targetCard.CampaignAddAttack(1, false);
@@ -108,14 +110,13 @@ public class AansMod
 ```
 
 ```powershell
-dotnet run --project samples/BytecodeMod -- `
-  <Blueprints>/Cards/Soviet/Allegiance/units/card_unit_t_70eot.uasset `
-  <kards.usmap> out OnPlayedFromHand
+dotnet run --project samples/BytecodeMod -- <Content> <kards.usmap> out
 ```
 
 实测：
 
 ```
+目标     card_unit_t_70eot.uasset :: OnPlayedFromHand（1 条注解）
 mod      OnPlayedFromHand 4 -> 3 条表达式
 字节码   EX_Context, EX_Return, EX_EndOfScript
 校验     OK（其余函数 2 个字节不变）

@@ -14,14 +14,14 @@
 | `Polaris.Assets` | [CardAsset](src/Polaris.Assets/CardAsset.md) · [CdoEditor](src/Polaris.Assets/CdoEditor.md) · [AssetDiff](src/Polaris.Assets/AssetDiff.md) · [FunctionBytes](src/Polaris.Assets/FunctionBytes.md) · [FunctionWriter](src/Polaris.Assets/FunctionWriter.md) · [AssetIndex](src/Polaris.Assets/AssetIndex.md) · [ClassPatcher](src/Polaris.Assets/ClassPatcher.md) | ✅ 7+5 · 🚧 4+5 | 读卡资产、改 CDO、函数字节校验/替换；bmap 与注入待做 |
 | `Polaris.Pak` | [ModPak](src/Polaris.Pak/ModPak.md) · [VENDORED](../../src/Polaris.Pak/VENDORED.md) | ✅ 3 | 继承 solstice-pak，输出 KARDS v3 mod pak |
 | `Polaris.TypeSystem` | [TypeMap](src/Polaris.TypeSystem/TypeMap.md) | 🚧 3 | C# 类型 ⇄ FProperty |
-| `Polaris.Compiler` | [Translator](src/Polaris.Compiler/Translator.md) · [BytecodeBuilder](src/Polaris.Compiler/BytecodeBuilder.md) · [BytecodeCheck](src/Polaris.Compiler/BytecodeCheck.md) · [AssetImportTable](src/Polaris.Compiler/AssetImportTable.md) · [UbergraphBuilder](src/Polaris.Compiler/UbergraphBuilder.md) | ✅ 2+1+1+4 · 🚧 2+3 | C# → 字节码（静态/实例调用）+ 导入解析 + 写回；变量读写/ubergraph 待做 |
+| `Polaris.Compiler` | [Translator](src/Polaris.Compiler/Translator.md) · [BytecodeBuilder](src/Polaris.Compiler/BytecodeBuilder.md) · [BytecodeCheck](src/Polaris.Compiler/BytecodeCheck.md) · [AssetImportTable](src/Polaris.Compiler/AssetImportTable.md) · [ModPlanBuilder](src/Polaris.Compiler/ModPlanBuilder.md) · [UbergraphBuilder](src/Polaris.Compiler/UbergraphBuilder.md) | ✅ 2+1+1+4+1 · 🚧 2+3 | C# → 字节码（静态/实例调用）+ 数据注解 + 导入解析 + 写回；变量读写/ubergraph 待做 |
 | `Polaris.Decompile` | [CSharpEmitter](src/Polaris.Decompile/CSharpEmitter.md) | 🚧 3 | 字节码 → 可读 C# |
 | `Polaris.SdkGen` | [SdkGenerator](src/Polaris.SdkGen/SdkGenerator.md) · [UsmapReader](src/Polaris.SdkGen/UsmapReader.md) · [JmapReader](src/Polaris.SdkGen/JmapReader.md) · [Json](src/Polaris.SdkGen/Json.md) | ✅ 4 | usmap + jmap → C# SDK（485 文件） |
 | `Polaris.SourceGen` | [SdkSourceGenerator](src/Polaris.SourceGen/SdkSourceGenerator.md) | ✅ 1 | 增量源生成器（编译期生成 SDK） |
 | `Polaris.Sdk` | [Runtime](src/Polaris.Sdk/Runtime.md) | ✅ 1 | 生成代码引用的运行时声明 |
 | `Polaris.Cli` | [Program](src/Polaris.Cli/Program.md) | ✅ 5 · 🚧 1 | `cards/pak/sdk`；`scan/apply/diff` 待做 |
 
-构建与验证：`.\run.ps1 build`（Solstice.Kismet → Sdk → SdkGen → SourceGen → Assets → Pak → Cli → Tests）、`.\run.ps1 verify`（12 个用例 + 两个编译闸）。
+构建与验证：`.\run.ps1 build`（Solstice.Kismet → Sdk → SdkGen → SourceGen → Assets → Pak → Cli → Tests）、`.\run.ps1 verify`（13 个用例 + 两个编译闸）。
 
 ## 2. 函数状态看板
 
@@ -37,6 +37,7 @@
 | Assets | [`Verify`](src/Polaris.Assets/CdoEditor.md#verifycard-cardasset-before-ireadonlydictionarystringstring-patches-ireadonlylistpatchspec-saved-savedasset-workdir-string-verifyreport) | ✅ | 重开比对 + 函数逐字节 |
 '| Assets | [`Compare`](src/Polaris.Assets/AssetDiff.md#comparebefore-byte-after-byte-bytediff) | ✅ | 字节差异摘要 |\n'| Assets | [`Hashes`](src/Polaris.Assets/FunctionBytes.md#hashesasset-uasset-ireadonlydictionarystring-string) | ✅ | 函数字节 SHA-256 |
 | Assets | [`Replace`](src/Polaris.Assets/FunctionWriter.md#replaceasset-uasset-functionname-string-bytecode-ireadonlylistkismetexpression-int) | ✅ | 替换函数字节码 |
+| Compiler | [`FindTargets`](src/Polaris.Compiler/ModPlanBuilder.md#findtargetscompilation-compilation-ireadonlylistmodtarget) | ✅ | 注解 → mod 计划 |
 | Compiler | [`Resolve`](src/Polaris.Compiler/AssetImportTable.md#resolveownerpath-string-functionname-string-fpackageindex) | ✅ | 类/函数 → 导入索引 |
 | Compiler | [`EnsureClass`](src/Polaris.Compiler/AssetImportTable.md#ensureclassownerpath-string-fpackageindex) | ✅ | 补类导入 |
 | Compiler | [`EnsurePackage`](src/Polaris.Compiler/AssetImportTable.md#ensurepackagepackagepath-string-fpackageindex) | ✅ | 补包导入 |

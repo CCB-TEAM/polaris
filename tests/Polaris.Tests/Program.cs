@@ -86,6 +86,7 @@ internal static class TestRunner
         CompilerBasic(root);
         CompilerWriteback(env, root);
         CompilerInstanceCall(env, root);
+        ModAnnotations(root);
         Errors(env, root);
 
         Console.WriteLine();
@@ -486,6 +487,42 @@ internal static class TestRunner
             True(BytecodeCheck.Run(paramExprs, host).Ok, "参数接收者自校验");
 
             Console.WriteLine($"      字段 {fieldExprs.Length} 条 / Offset {fieldContext.Offset}；参数 {paramExprs.Length} 条");
+        });
+    }
+
+    private static void ModAnnotations(string root)
+    {
+        Case("数据注解：[PolarisAsset]/[PolarisReplace] → mod 计划", () =>
+        {
+            const string source = """
+                using Polaris.Sdk;
+
+                [PolarisAsset("Blueprints/Cards/Soviet/Allegiance/units/card_unit_t_70eot.uasset")]
+                public class T70Mod
+                {
+                    [PolarisReplace("OnPlayedFromHand")]
+                    public void OnPlayed(UObject card) { }
+                }
+                """;
+
+            var references = ((string)AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES")!)
+                .Split(Path.PathSeparator)
+                .Select(p => MetadataReference.CreateFromFile(p))
+                .ToList();
+            references.Add(MetadataReference.CreateFromFile(typeof(Polaris.Sdk.UObject).Assembly.Location));
+
+            var compilation = CSharpCompilation.Create(
+                "AnnotationProbe",
+                [CSharpSyntaxTree.ParseText(source)],
+                references,
+                new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
+
+            var targets = ModPlanBuilder.FindTargets(compilation);
+            Equal(1, targets.Count);
+            Equal("Blueprints/Cards/Soviet/Allegiance/units/card_unit_t_70eot.uasset", targets[0].AssetPath);
+            Equal("OnPlayedFromHand", targets[0].FunctionName);
+            Equal("T70Mod", targets[0].Class.Name);
+            Equal("OnPlayed", targets[0].Method.Name);
         });
     }
 
