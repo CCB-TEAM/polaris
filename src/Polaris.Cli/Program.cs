@@ -25,7 +25,7 @@ internal static class Cli
           check        --asset <uasset> | --dir <目录> [--limit N] --usmap <usmap> [--json <file>]
           decompile    --asset <uasset> | --dir <目录> --usmap <usmap> [--function <name>] [--strict] [--out <file|dir>]
           diff         --before <uasset> --after <uasset> --usmap <usmap>   比较 CDO 与函数字节
-          ubergraph    --asset <uasset> --usmap <usmap>                    诊断入口/段偏移
+          functions    --asset <uasset> --usmap <usmap>                    列出函数与表达式数
 
         global options:
           --work <dir>         工作目录（usmap 副本与字节码校验用），默认 .polaris-work
@@ -66,6 +66,11 @@ internal static class Cli
             if (args[0] == "diff")
             {
                 return Diff(Parse(args.Skip(1).ToArray()));
+            }
+
+            if (args[0] == "functions")
+            {
+                return Functions(Parse(args.Skip(1).ToArray()));
             }
 
             if (args[0] == "ubergraph")
@@ -574,6 +579,17 @@ internal static class Cli
             default:
                 return 0;
         }
+    }
+
+    private static int Functions(Options opts)
+    {
+        var card = CardAsset.Open(opts.Require("asset"), opts.Require("usmap"), opts.Work);
+        foreach (var function in card.Asset.Exports.OfType<UAssetAPI.ExportTypes.FunctionExport>())
+        {
+            Console.WriteLine($"{function.ObjectName}\t{function.ScriptBytecode?.Length ?? 0}");
+        }
+
+        return 0;
     }
 
     private static int Ubergraph(Options opts)

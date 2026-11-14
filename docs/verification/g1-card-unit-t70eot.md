@@ -75,7 +75,24 @@ targetCard.CampaignAddAttack(x, false);
 
 这一包同时验证：局部变量（`EX_Let` + 新 FProperty）、算术（`EX_CallMath`）、分支（`EX_JumpIfNot`/`EX_Jump`）、参数传递（`EX_Context`）。
 
-## 8. 已知风险''
+'## 8. G1d：搬别的卡的逻辑（待测）
+
+参考 `card_event_spirit_of_rome.CanPlayFromHand` 的写法：先用 `IsInfantry(out bool)` 判断目标，再按结果走不同分支。
+
+产物：`D:\files\projects\.tmp\polaris\g1d\card_unit_t_70eot_g1d.pak`（7893 字节），源码 [samples/G1dMod.cs](../../samples/G1dMod.cs)。
+
+```csharp
+bool infantry;
+targetCard.IsInfantry(out infantry);
+if (infantry) { targetCard.CampaignAddAttack(3, false); }
+else          { targetCard.CampaignAddAttack(1, false); }
+```
+
+**预期**：打出该卡时，若它是步兵则攻击 +3，否则 +1。
+
+Flora 侧也应能正常反编译（跳转已改为 Visit 坐标系：`JumpIfNot → 98`、`Jump → 136`，均 `landedFlora=True`）。
+
+## 9. 已知风险'''
 
 - 该资产的跳转/入口偏移与解析布局不一致（见 `docs/PLAN.md §9`），但我们替换的是**平坦函数** `OnPlayedFromHand`，不触碰 ubergraph 段重排；写回后已通过 `RoundTrip.Verify`。
 - 若游戏启动即崩，优先怀疑 pak 格式/挂载路径；可用 `polaris pak` 重新核对条目路径。
